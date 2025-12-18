@@ -3,531 +3,392 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Life Manager (Sync Pro)</title>
+    <title>Life Manager (诊断版)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            /* Apple UI Colors */
-            --bg: #f5f5f7;
-            --card: #ffffff;
-            --text-main: #1d1d1f;
-            --text-sec: #86868b;
-            --border: #d2d2d7;
-            
-            /* iOS System Colors */
-            --primary: #007aff;
-            --success: #34c759;
-            --danger: #ff3b30;
-            --warn: #ff9500;
-            
-            /* Quadrant Colors */
-            --q1: #ff3b30; 
-            --q2: #007aff;
-            --q3: #ff9500;
-            --q4: #8e8e93;
-
-            --shadow-card: 0 4px 12px rgba(0,0,0,0.04);
-            --shadow-float: 0 12px 30px rgba(0,0,0,0.12);
-            --radius-l: 18px;
-            --radius-m: 12px;
+            --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --sub: #86868b;
+            --primary: #007aff; --danger: #ff3b30; --warn: #ff9500;
+            --shadow: 0 4px 12px rgba(0,0,0,0.06);
         }
-
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; 
-            background: var(--bg); 
-            color: var(--text-main); 
-            margin: 0; 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-            -webkit-font-smoothing: antialiased; 
-        }
-
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
         /* 顶部导航 */
-        header { 
-            background: rgba(255, 255, 255, 0.72); 
-            backdrop-filter: saturate(180%) blur(20px); 
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            height: 54px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            padding: 0 20px; 
-            position: sticky; top: 0; z-index: 100;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-        .app-title { font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
-        .sync-info { font-size: 13px; color: var(--primary); font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer; }
-        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; transition: background 0.3s; }
-        .sync-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .sync-dot.syncing { background: var(--primary); animation: pulse 1s infinite; }
-        .sync-dot.error { background: var(--danger); }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; z-index: 10; }
+        .app-title { font-weight: 700; font-size: 17px; }
+        .status-badge { font-size: 12px; padding: 4px 10px; border-radius: 12px; background: #eee; color: #666; font-weight: 500; transition: 0.3s; cursor: pointer; }
+        .status-badge.ok { background: #e4f9e6; color: #34c759; }
+        .status-badge.err { background: #ffebeb; color: #ff3b30; }
+        .status-badge.load { background: #eef7ff; color: #007aff; }
 
-        /* 过滤器 */
-        .tabs-wrapper { background: var(--bg); padding: 10px 16px; flex-shrink: 0; }
-        .tabs { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
-        .tabs::-webkit-scrollbar { display: none; }
-        .tab { font-size: 15px; color: var(--text-sec); white-space: nowrap; cursor: pointer; padding: 6px 14px; border-radius: 20px; transition: 0.3s; display: flex; align-items: center; }
-        .tab.active { color: var(--text-main); background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); font-weight: 600; }
-        .badge { background: rgba(0,0,0,0.06); font-size: 11px; padding: 2px 6px; border-radius: 10px; margin-left: 6px; color: var(--text-sec); font-weight: 400; }
-        .tab.active .badge { background: var(--primary); color: #fff; }
+        /* 标签栏 */
+        .tabs { display: flex; gap: 10px; padding: 10px 16px; overflow-x: auto; flex-shrink: 0; background: var(--bg); }
+        .tab { padding: 6px 14px; border-radius: 18px; font-size: 14px; color: var(--sub); white-space: nowrap; cursor: pointer; }
+        .tab.active { background: #fff; color: var(--text); font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
         /* 主区域 */
-        .main { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+        .main { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 
-        /* 输入框 */
-        .input-box { background: var(--card); padding: 20px; border-radius: var(--radius-l); box-shadow: var(--shadow-card); }
-        .inp-title { width: 100%; border: none; font-size: 18px; font-weight: 600; outline: none; margin-bottom: 12px; background: transparent; }
-        .inp-note { width: 100%; border: none; border-bottom: 1px solid #f0f0f0; font-size: 14px; outline: none; resize: none; height: 28px; color: var(--text-sec); margin-bottom: 16px; font-family: inherit; background: transparent; }
-        .inp-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-        .date-inp { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--primary); font-weight: 500; font-family: inherit; }
-        .check-lbl { font-size: 14px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
-        
+        /* 输入区 */
+        .input-card { background: var(--card); padding: 16px; border-radius: 16px; box-shadow: var(--shadow); }
+        .inp-tit { width: 100%; border: none; font-size: 16px; font-weight: 600; margin-bottom: 10px; outline: none; }
+        .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; height: 30px; margin-bottom: 10px; outline: none; resize: none; color: #666; }
+        .inp-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+        .date-pick { background: #f2f2f7; border: none; border-radius: 8px; padding: 5px 8px; font-size: 12px; color: var(--primary); }
         .tag-row { display: flex; justify-content: space-between; align-items: center; }
-        .cats { display: flex; gap: 10px; }
-        .cat-chip { font-size: 13px; padding: 6px 14px; background: #f2f2f7; color: var(--text-sec); border-radius: 20px; cursor: pointer; transition: 0.2s; font-weight: 500; }
-        .cat-chip.selected { background: var(--text-main); color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .btn-add { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
+        .chips { display: flex; gap: 8px; }
+        .chip { padding: 4px 12px; border-radius: 12px; font-size: 12px; background: #f2f2f7; color: var(--sub); cursor: pointer; }
+        .chip.active { background: #1d1d1f; color: #fff; }
+        .btn-add { background: var(--primary); color: #fff; border: none; padding: 6px 16px; border-radius: 14px; font-weight: 600; cursor: pointer; }
 
-        /* 象限 */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        @media(max-width: 650px) { .grid { grid-template-columns: 1fr; } }
-        .panel { background: var(--card); border-radius: var(--radius-l); padding: 16px; min-height: 160px; box-shadow: var(--shadow-card); position: relative; overflow: hidden; display: flex; flex-direction: column; }
-        .panel::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
-        .p-head { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        /* 列表显示 */
+        .task-list { display: flex; flex-direction: column; gap: 10px; }
+        .task-card { background: var(--card); padding: 12px; border-radius: 12px; display: flex; align-items: flex-start; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .t-main { flex: 1; }
+        .t-tit { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+        .t-meta { font-size: 12px; color: var(--sub); display: flex; gap: 8px; align-items: center; }
+        .tag { padding: 2px 6px; border-radius: 4px; background: #f2f2f7; }
+        .t-act { display: flex; flex-direction: column; gap: 8px; }
+        .act-btn { border: none; background: transparent; color: #ccc; font-size: 16px; cursor: pointer; }
+        .act-btn.done:hover { color: #34c759; }
+        .act-btn.del:hover { color: #ff3b30; }
 
-        /* 列表 */
-        ul { list-style: none; padding: 0; margin: 0; }
-        .task { padding: 12px 0; border-bottom: 1px solid #f5f5f7; display: flex; gap: 12px; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .task:last-child { border-bottom: none; }
-        .t-body { flex: 1; }
-        .t-txt { font-size: 15px; font-weight: 500; line-height: 1.4; }
-        .t-sub { font-size: 13px; color: var(--text-sec); margin-top: 4px; }
-        .t-tags { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-        .tg { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f2f2f7; color: var(--text-sec); font-weight: 500; }
-        .tg.due { color: #fff; background: var(--danger); }
-        .tg.due-warn { color: #fff; background: var(--warn); }
+        /* 归档样式 */
+        .archive-mode .task-card { opacity: 0.7; }
+        .archive-mode .t-tit { color: #888; }
         
-        .t-act { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-        .icon-btn { border: none; background: transparent; color: #d1d1d6; font-size: 18px; cursor: pointer; padding: 6px; }
-        .icon-btn.ok:hover { color: var(--success); }
-        .icon-btn.del:hover { color: var(--danger); }
-
-        /* 归档元数据 */
-        .date-meta { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
-        .meta-row { font-size: 11px; color: #aaa; display: flex; align-items: center; gap: 5px; }
-
-        /* 设置弹窗 */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; }
-        .modal-box { background: rgba(255,255,255,0.95); backdrop-filter: saturate(180%) blur(20px); width: 85%; max-width: 320px; border-radius: 20px; padding: 24px; box-shadow: var(--shadow-float); }
-        .modal-tit { font-size: 18px; font-weight: 600; margin-bottom: 20px; text-align: center; }
-        .f-grp { margin-bottom: 16px; }
-        .f-grp label { display: block; font-size: 13px; color: var(--text-sec); margin-bottom: 6px; }
-        .f-grp input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #e5e5e5; border-radius: 10px; font-size: 14px; }
-        .btn-block { width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
-        .btn-cancel { background: transparent; color: var(--text-sec); margin-top: 8px; }
-        .empty-hint { text-align: center; color: #d1d1d6; font-size: 13px; padding: 30px 0; }
+        /* 弹窗 */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 999; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: #fff; width: 80%; max-width: 300px; padding: 20px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .m-tit { font-size: 16px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+        .m-inp { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; box-sizing: border-box; font-size: 14px; }
+        .m-btn { width: 100%; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .m-close { text-align: center; margin-top: 10px; color: #999; font-size: 13px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <header>
     <div class="app-title">Life Manager</div>
-    <div class="sync-info">
-        <div id="syncDot" class="sync-dot"></div>
-        <span id="statusTxt" onclick="forceSync()" style="font-variant-numeric: tabular-nums;">未连接</span>
-        <i class="fas fa-cog" onclick="showSettings()" style="padding: 8px; color: var(--text-main); opacity: 0.6;"></i>
-    </div>
+    <div id="statusEl" class="status-badge" onclick="syncNow()">离线模式</div>
+    <i class="fas fa-cog" onclick="openSet()" style="padding:10px; color:#666;"></i>
 </header>
 
-<div class="tabs-wrapper">
-    <div class="tabs">
-        <div class="tab active" onclick="setFilter('all')" id="tab-all">全部 <span class="badge" id="c-all">0</span></div>
-        <div class="tab" onclick="setFilter('work')" id="tab-work">投资 <span class="badge" id="c-work">0</span></div>
-        <div class="tab" onclick="setFilter('life')" id="tab-life">生活 <span class="badge" id="c-life">0</span></div>
-        <div class="tab" onclick="setFilter('health')" id="tab-health">健康 <span class="badge" id="c-health">0</span></div>
-        <div class="tab" onclick="setFilter('archive')" id="tab-archive">归档 <span class="badge" id="c-archive">0</span></div>
-    </div>
+<div class="tabs">
+    <div class="tab active" onclick="filter('all')" id="tab-all">全部</div>
+    <div class="tab" onclick="filter('work')" id="tab-work">投资</div>
+    <div class="tab" onclick="filter('life')" id="tab-life">生活</div>
+    <div class="tab" onclick="filter('archive')" id="tab-archive">归档</div>
 </div>
 
 <div class="main">
-    <div class="input-box" id="inputArea">
-        <input type="text" id="newTitle" class="inp-title" placeholder="添加新事项...">
-        <textarea id="newNote" class="inp-note" placeholder="备注 (可选)"></textarea>
-        <div class="inp-row">
-            <input type="date" id="newDate" class="date-inp">
-            <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急 🔥</label>
-            <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要 ⭐</label>
+    <!-- 输入区 (非归档模式显示) -->
+    <div class="input-card" id="inputArea">
+        <input type="text" id="inTitle" class="inp-tit" placeholder="输入待办事项...">
+        <textarea id="inNote" class="inp-note" placeholder="备注..."></textarea>
+        <div class="inp-tools">
+            <input type="date" id="inDate" class="date-pick">
+            <label style="font-size:13px; display:flex; align-items:center;"><input type="checkbox" id="inUrg"> 紧急</label>
         </div>
         <div class="tag-row">
-            <div class="cats">
-                <div class="cat-chip selected" onclick="setInpCat('work')" id="chip-work">💼 投资</div>
-                <div class="cat-chip" onclick="setInpCat('life')" id="chip-life">🏠 生活</div>
-                <div class="cat-chip" onclick="setInpCat('health')" id="chip-health">❤️ 健康</div>
+            <div class="chips">
+                <div class="chip active" onclick="setCat('work')" id="chip-work">💼 投资</div>
+                <div class="chip" onclick="setCat('life')" id="chip-life">🏠 生活</div>
+                <div class="chip" onclick="setCat('health')" id="chip-health">❤️ 健康</div>
             </div>
-            <button class="btn-add" onclick="addTask()"><i class="fas fa-arrow-up"></i></button>
+            <button class="btn-add" onclick="addItem()">添加</button>
         </div>
     </div>
 
-    <div class="grid" id="matrixView">
-        <div class="panel">
-            <style>.panel:nth-child(1)::before{background:var(--q1);}</style>
-            <div class="p-head" style="color:var(--q1)">马上做</div>
-            <ul id="list-q1"></ul>
-        </div>
-        <div class="panel">
-            <style>.panel:nth-child(2)::before{background:var(--q2);}</style>
-            <div class="p-head" style="color:var(--q2)">计划做</div>
-            <ul id="list-q2"></ul>
-        </div>
-        <div class="panel">
-            <style>.panel:nth-child(3)::before{background:var(--q3);}</style>
-            <div class="p-head" style="color:var(--q3)">抽空做</div>
-            <ul id="list-q3"></ul>
-        </div>
-        <div class="panel">
-            <style>.panel:nth-child(4)::before{background:var(--q4);}</style>
-            <div class="p-head" style="color:var(--q4)">备忘录</div>
-            <ul id="list-q4"></ul>
-        </div>
-    </div>
-
-    <div class="panel archive-view" id="archiveView" style="display:none; min-height: 400px;">
-        <div class="p-head" style="justify-content:space-between;">
-            <span>历史记录</span>
-            <span onclick="clearArchive()" style="color:var(--danger); cursor:pointer; font-size:12px; background:rgba(255,59,48,0.1); padding:4px 10px; border-radius:12px;">清空</span>
-        </div>
-        <ul id="list-arch"></ul>
-    </div>
+    <div class="task-list" id="taskList"></div>
+    <div style="text-align:center; color:#ccc; font-size:12px; margin-top:20px;" id="emptyMsg">暂无内容</div>
 </div>
 
-<div class="modal" id="settingModal">
+<!-- 设置弹窗 -->
+<div class="modal" id="setModal">
     <div class="modal-box">
-        <div class="modal-tit">GitHub 同步设置</div>
-        <div class="f-grp">
-            <label>Token (GitHub PAT)</label>
-            <input type="password" id="cfgToken" placeholder="ghp_...">
+        <div class="m-tit">GitHub 同步配置</div>
+        <input class="m-inp" type="password" id="cfgToken" placeholder="Token (ghp_...)">
+        <input class="m-inp" type="text" id="cfgUser" placeholder="用户名 (User)">
+        <input class="m-inp" type="text" id="cfgRepo" placeholder="仓库名 (Repo)">
+        <button class="m-btn" onclick="saveSet()">保存并连接</button>
+        <div class="m-close" onclick="closeSet()">关闭</div>
+        <div style="font-size:11px; color:red; margin-top:10px; line-height:1.4;">
+            *注意：仓库必须已存在，且包含README(非空仓库)。Token必须有repo权限。
         </div>
-        <div class="f-grp">
-            <label>GitHub 用户名</label>
-            <input type="text" id="cfgUser" placeholder="例如: dlezywj-cell">
-        </div>
-        <div class="f-grp">
-            <label>仓库名 (Repo Name)</label>
-            <input type="text" id="cfgRepo" placeholder="例如: lifedata">
-        </div>
-        <button class="btn-block" onclick="saveConfig()">保存并同步</button>
-        <button class="btn-block btn-cancel" onclick="closeSettings()">关闭</button>
     </div>
 </div>
 
 <script>
-    // --- 核心配置 ---
-    let store = {
-        tasks: [],
-        config: {
-            token: localStorage.getItem('gh_token') || '',
-            user: localStorage.getItem('gh_user') || '',
-            repo: localStorage.getItem('gh_repo') || '',
-            file: 'data.json'
-        },
-        filter: 'all', 
-        inputCat: 'work',
-        isSyncing: false,
-        syncTimer: null
-    };
+const DB_KEY = 'lm_db_v2';
+let state = {
+    tasks: JSON.parse(localStorage.getItem(DB_KEY) || '[]'),
+    filter: 'all',
+    cat: 'work',
+    conf: {
+        token: localStorage.getItem('gh_token') || '',
+        user: localStorage.getItem('gh_user') || '',
+        repo: localStorage.getItem('gh_repo') || ''
+    },
+    syncing: false
+};
 
-    // --- 日期工具 ---
-    function formatDate(isoStr) {
-        if (!isoStr) return '';
-        try {
-            const d = new Date(isoStr);
-            const m = (d.getMonth() + 1).toString().padStart(2, '0');
-            const day = d.getDate().toString().padStart(2, '0');
-            const h = d.getHours().toString().padStart(2, '0');
-            const min = d.getMinutes().toString().padStart(2, '0');
-            return `${d.getFullYear()}/${m}/${day} ${h}:${min}`;
-        } catch(e) { return isoStr; }
+// --- 初始化 ---
+function init() {
+    render();
+    if(state.conf.token && state.conf.user && state.conf.repo) {
+        setStatus('ready', '点击同步');
+        // 自动拉取一次
+        syncNow();
+    } else {
+        setStatus('none', '本地模式');
+        if(state.tasks.length === 0) setTimeout(openSet, 500);
     }
+}
 
-    // --- 初始化 ---
-    function init() {
-        // 1. 加载本地
-        try {
-            const local = localStorage.getItem('lm_data');
-            if(local) store.tasks = JSON.parse(local);
-        } catch(e) { console.error("Load error", e); store.tasks = []; }
-        
-        render();
+// --- 核心同步逻辑 (诊断版) ---
+async function syncNow() {
+    if(state.syncing) return;
+    if(!state.conf.token) return alert("请先配置 GitHub Token");
 
-        // 2. 如果有配置，立即执行一次全量同步（拉取+合并）
-        if(store.config.token) {
-            updateStatus('ready');
-            performFullSync();
+    state.syncing = true;
+    setStatus('load', '正在连接 GitHub...');
+
+    const { user, repo, token } = state.conf;
+    const fileName = 'data.json';
+    const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
+
+    try {
+        // 1. 尝试获取远程文件
+        const getRes = await fetch(url + '?t=' + Date.now(), {
+            headers: { 
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+
+        let sha = null;
+        let remoteTasks = [];
+
+        if (getRes.status === 200) {
+            // 文件存在：读取并合并
+            const data = await getRes.json();
+            sha = data.sha;
+            try {
+                const content = decodeURIComponent(escape(atob(data.content)));
+                remoteTasks = JSON.parse(content);
+            } catch(e) { console.error("Parse Error", e); }
+        } else if (getRes.status === 404) {
+            // 文件不存在：这很正常，说明是第一次
+            console.log("云端无文件，准备创建...");
+        } else if (getRes.status === 401) {
+            throw new Error("Token 错误或过期 (401)");
+        } else if (getRes.status === 403) {
+            throw new Error("无权限 (403)，请检查 Token 是否勾选了 repo 权限");
+        } else {
+            // 可能是仓库不存在
+            throw new Error(`连接错误: ${getRes.status}。请检查用户名或仓库名是否正确`);
         }
-    }
 
-    // --- 业务逻辑 ---
-    window.addTask = function() {
-        const title = document.getElementById('newTitle').value.trim();
-        if(!title) return alert('请输入内容');
-        const task = {
-            id: Date.now(),
-            title: title,
-            notes: document.getElementById('newNote').value.trim(),
-            category: store.inputCat,
-            deadline: document.getElementById('newDate').value,
-            urgent: document.getElementById('isUrgent').checked,
-            important: document.getElementById('isImp').checked,
-            completed: false,
-            createdAt: new Date().toISOString(),
-            completedAt: null
+        // 2. 合并数据 (简单的 ID 去重合并)
+        const localMap = new Map(state.tasks.map(t => [t.id, t]));
+        const remoteMap = new Map(remoteTasks.map(t => [t.id, t]));
+        
+        // 优先保留本地的修改，同时吸纳云端的新数据
+        const merged = [...remoteTasks];
+        state.tasks.forEach(localT => {
+            const index = merged.findIndex(r => r.id === localT.id);
+            if(index > -1) {
+                merged[index] = localT; // 覆盖云端旧数据
+            } else {
+                merged.push(localT); // 新增本地数据
+            }
+        });
+
+        // 更新本地
+        state.tasks = merged;
+        saveLocal();
+
+        // 3. 上传回云端 (PUT)
+        const putBody = {
+            message: "Sync from LifeManager",
+            content: btoa(unescape(encodeURIComponent(JSON.stringify(merged, null, 2))))
         };
-        store.tasks.push(task);
-        // 清空输入
-        document.getElementById('newTitle').value = '';
-        document.getElementById('newNote').value = '';
-        saveAndSync();
-    };
+        if (sha) putBody.sha = sha;
 
-    window.toggleStatus = function(id) {
-        const t = store.tasks.find(x => x.id == id);
-        if(t) {
-            t.completed = !t.completed;
-            t.completedAt = t.completed ? new Date().toISOString() : null;
-            saveAndSync();
+        const putRes = await fetch(url, {
+            method: 'PUT',
+            headers: { 
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(putBody)
+        });
+
+        if (!putRes.ok) {
+            const errJson = await putRes.json();
+            throw new Error(`上传失败 (${putRes.status}): ${errJson.message}`);
         }
-    };
 
-    window.removeTask = function(id) {
-        if(confirm('删除此条目？')) {
-            store.tasks = store.tasks.filter(x => x.id != id);
-            saveAndSync();
-        }
-    };
+        setStatus('ok', '同步成功');
+        setTimeout(() => setStatus('ready', '准备就绪'), 3000);
 
-    window.clearArchive = function() {
-        if(confirm('清空归档？')) {
-            store.tasks = store.tasks.filter(t => !t.completed);
-            saveAndSync();
-        }
-    };
+    } catch (err) {
+        console.error(err);
+        setStatus('err', '同步失败');
+        alert("同步出错原因：\n" + err.message);
+    } finally {
+        state.syncing = false;
+    }
+}
 
-    window.setFilter = f => { store.filter = f; render(); };
-    window.setInpCat = c => { 
-        store.inputCat = c; 
-        document.querySelectorAll('.cat-chip').forEach(el => el.classList.remove('selected'));
-        document.getElementById('chip-' + c).classList.add('selected');
-    };
-
-    // --- 核心保存与同步机制 ---
+// --- 本地逻辑 ---
+function addItem() {
+    const title = document.getElementById('inTitle').value.trim();
+    if(!title) return alert("写点什么吧");
     
-    // 1. 本地保存，并触发防抖同步
-    function saveAndSync() {
-        localStorage.setItem('lm_data', JSON.stringify(store.tasks));
-        render();
+    state.tasks.push({
+        id: Date.now(),
+        title: title,
+        note: document.getElementById('inNote').value,
+        cat: state.cat,
+        date: document.getElementById('inDate').value,
+        urgent: document.getElementById('inUrg').checked,
+        done: false,
+        createAt: new Date().toISOString()
+    });
+    
+    document.getElementById('inTitle').value = '';
+    document.getElementById('inNote').value = '';
+    saveLocal();
+    syncNow(); // 添加后自动同步
+}
+
+function toggle(id) {
+    const t = state.tasks.find(x => x.id === id);
+    if(t) {
+        t.done = !t.done;
+        t.doneAt = t.done ? new Date().toISOString() : null;
+        saveLocal();
+        syncNow(); // 修改后自动同步
+    }
+}
+
+function del(id) {
+    if(confirm("删除这条？")) {
+        state.tasks = state.tasks.filter(x => x.id !== id);
+        saveLocal();
+        syncNow();
+    }
+}
+
+function clearArchive() {
+    if(confirm("清空归档？")) {
+        state.tasks = state.tasks.filter(t => !t.done);
+        saveLocal();
+        syncNow();
+    }
+}
+
+// --- 渲染 ---
+function render() {
+    const list = document.getElementById('taskList');
+    list.innerHTML = '';
+    let count = 0;
+
+    // 排序：未完成在前，完成在后
+    const sorted = [...state.tasks].sort((a,b) => (a.done === b.done) ? 0 : a.done ? 1 : -1);
+
+    sorted.forEach(t => {
+        // 过滤逻辑
+        if(state.filter === 'archive' && !t.done) return;
+        if(state.filter !== 'archive' && t.done) return;
+        if(state.filter !== 'all' && state.filter !== 'archive' && t.cat !== state.filter) return;
+
+        count++;
+        const dateStr = t.date ? `<span class="tag">${t.date.slice(5)}</span>` : '';
+        const catMap = {work:'💼', life:'🏠', health:'❤️'};
+        const cls = t.done ? 'act-btn undo' : 'act-btn done';
+        const icon = t.done ? 'fa-undo' : 'fa-check';
         
-        if(store.config.token) {
-            if(store.syncTimer) clearTimeout(store.syncTimer);
-            store.syncTimer = setTimeout(performFullSync, 1000); // 1秒后执行同步
+        let metaHtml = '';
+        if(state.filter === 'archive') {
+             metaHtml = `<div style="font-size:10px; color:#aaa; margin-top:4px;">
+                创建: ${t.createAt?.slice(0,10) || '-'} / 完成: ${t.doneAt?.slice(0,10) || '-'}
+             </div>`;
         }
-    }
 
-    // 2. 强壮的同步函数：Get -> Merge -> Put
-    async function performFullSync() {
-        if(store.isSyncing) return;
-        if(!store.config.token) return;
+        const div = document.createElement('div');
+        div.className = 'task-card';
+        div.innerHTML = `
+            <div class="t-main">
+                <div class="t-tit" style="${t.done?'text-decoration:line-through;color:#aaa':''}">${t.title}</div>
+                <div class="t-meta">
+                    <span class="tag">${catMap[t.cat]||'•'}</span>
+                    ${dateStr}
+                    ${t.urgent ? '<span class="tag" style="color:red">🔥</span>' : ''}
+                </div>
+                ${t.note ? `<div style="font-size:12px;color:#999;margin-top:4px;">${t.note}</div>` : ''}
+                ${metaHtml}
+            </div>
+            <div class="t-act">
+                <button class="${cls}" onclick="toggle(${t.id})"><i class="fas ${icon}"></i></button>
+                <button class="act-btn del" onclick="del(${t.id})"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        list.appendChild(div);
+    });
 
-        store.isSyncing = true;
-        updateStatus('syncing');
+    document.getElementById('emptyMsg').style.display = count ? 'none' : 'block';
+    document.getElementById('inputArea').style.display = state.filter === 'archive' ? 'none' : 'block';
+    
+    // 高亮 Tab
+    document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+    document.getElementById('tab-'+state.filter).classList.add('active');
+    
+    // 归档模式
+    document.body.className = state.filter === 'archive' ? 'archive-mode' : '';
+}
 
-        try {
-            // A. 获取云端数据 (GET)
-            const apiUrl = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}?t=${Date.now()}`;
-            const getRes = await fetch(apiUrl, { 
-                headers: { Authorization: `token ${store.config.token}`, 'Cache-Control': 'no-cache' }
-            });
+// --- 工具函数 ---
+function saveLocal() {
+    localStorage.setItem(DB_KEY, JSON.stringify(state.tasks));
+    render();
+}
+function filter(f) { state.filter = f; render(); }
+function setCat(c) { 
+    state.cat = c; 
+    document.querySelectorAll('.chip').forEach(e => e.classList.remove('active'));
+    document.getElementById('chip-'+c).classList.add('active');
+}
+function setStatus(type, txt) {
+    const el = document.getElementById('statusEl');
+    el.className = 'status-badge ' + type;
+    el.innerText = txt;
+}
 
-            let remoteTasks = [];
-            let remoteSha = null;
+// 设置界面
+function openSet() {
+    document.getElementById('cfgToken').value = state.conf.token;
+    document.getElementById('cfgUser').value = state.conf.user;
+    document.getElementById('cfgRepo').value = state.conf.repo;
+    document.getElementById('setModal').style.display = 'flex';
+}
+function closeSet() { document.getElementById('setModal').style.display = 'none'; }
+function saveSet() {
+    state.conf.token = document.getElementById('cfgToken').value.trim();
+    state.conf.user = document.getElementById('cfgUser').value.trim();
+    state.conf.repo = document.getElementById('cfgRepo').value.trim();
+    
+    localStorage.setItem('gh_token', state.conf.token);
+    localStorage.setItem('gh_user', state.conf.user);
+    localStorage.setItem('gh_repo', state.conf.repo);
+    
+    closeSet();
+    syncNow();
+}
 
-            if(getRes.status === 200) {
-                const data = await getRes.json();
-                remoteSha = data.sha;
-                const contentStr = decodeURIComponent(escape(atob(data.content)));
-                try { remoteTasks = JSON.parse(contentStr); } catch(e) { console.warn('JSON parse err'); }
-            } else if(getRes.status === 404) {
-                // 文件不存在，准备新建
-                console.log("Remote file not found, creating...");
-            } else {
-                throw new Error(`Get Error ${getRes.status}`);
-            }
-
-            // B. 智能合并 (Merge)
-            // 策略：Union (并集)。如果ID相同，本地覆盖云端(假设本地是最新操作)。如果ID不同，保留云端的(防止多端数据丢失)。
-            const taskMap = new Map();
-            
-            // 先放入云端数据
-            remoteTasks.forEach(t => taskMap.set(t.id, t));
-            
-            // 再放入本地数据（本地覆盖云端）
-            store.tasks.forEach(t => taskMap.set(t.id, t));
-
-            // 生成最终列表
-            const mergedList = Array.from(taskMap.values());
-
-            // 更新本地存储（因为可能吸纳了云端的新数据）
-            store.tasks = mergedList;
-            localStorage.setItem('lm_data', JSON.stringify(store.tasks));
-            render();
-
-            // C. 推送合并后的数据 (PUT)
-            const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(mergedList, null, 2))));
-            const body = {
-                message: 'Sync update from web',
-                content: contentBase64
-            };
-            if(remoteSha) body.sha = remoteSha; // 带着刚才获取的SHA，绝对不会409
-
-            const putRes = await fetch(`https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`, {
-                method: 'PUT',
-                headers: { Authorization: `token ${store.config.token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-
-            if(putRes.ok) {
-                updateStatus('online');
-            } else {
-                updateStatus('error');
-                console.error('Put failed', putRes.status);
-            }
-
-        } catch(e) {
-            console.error("Sync Error", e);
-            updateStatus('error');
-        } finally {
-            store.isSyncing = false;
-        }
-    }
-
-    window.forceSync = performFullSync;
-
-    // --- UI 渲染 ---
-    function render() {
-        const buckets = { q1: [], q2: [], q3: [], q4: [], arch: [] };
-        const counts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
-        const now = new Date().setHours(0,0,0,0);
-
-        store.tasks.forEach(t => {
-            if(t.completed) counts.archive++;
-            else {
-                counts.all++;
-                if(counts.hasOwnProperty(t.category)) counts[t.category]++;
-            }
-
-            let visible = false;
-            if(store.filter === 'archive') visible = t.completed;
-            else visible = !t.completed && (store.filter === 'all' || t.category === store.filter);
-
-            if(!visible) return;
-
-            let dateTag = '';
-            if(t.deadline && !t.completed) {
-                const diff = Math.ceil((new Date(t.deadline.replace(/-/g,'/')) - now) / 86400000);
-                if(diff < 0) dateTag = `<span class="tg due">逾期${Math.abs(diff)}天</span>`;
-                else if(diff === 0) dateTag = `<span class="tg due-warn">今天</span>`;
-                else if(diff <= 3) dateTag = `<span class="tg due-warn">${diff}天后</span>`;
-                else dateTag = `<span class="tg">${diff}天后</span>`;
-            }
-            const catMap = { work:'投资', life:'生活', health:'健康' };
-            const catName = catMap[t.category] || '其他';
-
-            const btns = store.filter === 'archive' 
-                ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-undo"></i></button>
-                   <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash-alt"></i></button>`
-                : `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-check-circle"></i></button>
-                   <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`;
-
-            let meta = '';
-            if(store.filter === 'archive') {
-                meta = `<div class="date-meta">
-                    <div class="meta-row"><i class="fas fa-plus-circle"></i> 创建: ${formatDate(t.createdAt)}</div>
-                    <div class="meta-row" style="color:var(--success)"><i class="fas fa-check-circle"></i> 完成: ${formatDate(t.completedAt)}</div>
-                </div>`;
-            }
-
-            const html = `
-                <li class="task">
-                    <div class="t-body">
-                        <div class="t-txt">${esc(t.title)}</div>
-                        ${t.notes ? `<div class="t-sub">${esc(t.notes)}</div>` : ''}
-                        <div class="t-tags"><span class="tg">${catName}</span>${dateTag}</div>
-                        ${meta}
-                    </div>
-                    <div class="t-act">${btns}</div>
-                </li>`;
-
-            if(store.filter === 'archive') buckets.arch.push(html);
-            else if(t.urgent && t.important) buckets.q1.push(html);
-            else if(!t.urgent && t.important) buckets.q2.push(html);
-            else if(t.urgent && !t.important) buckets.q3.push(html);
-            else buckets.q4.push(html);
-        });
-
-        const setH = (id, h) => document.getElementById(id).innerHTML = h.length ? h.join('') : '<div class="empty-hint">无内容</div>';
-        setH('list-q1', buckets.q1); setH('list-q2', buckets.q2);
-        setH('list-q3', buckets.q3); setH('list-q4', buckets.q4);
-        setH('list-arch', buckets.arch);
-
-        document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
-        document.getElementById('tab-' + store.filter).classList.add('active');
-        
-        Object.keys(counts).forEach(k => {
-            const el = document.getElementById('c-' + k);
-            if(el) el.innerText = counts[k];
-        });
-
-        const isArch = store.filter === 'archive';
-        document.getElementById('matrixView').style.display = isArch ? 'none' : 'grid';
-        document.getElementById('inputArea').style.display = isArch ? 'none' : 'block';
-        document.getElementById('archiveView').style.display = isArch ? 'block' : 'none';
-    }
-
-    function updateStatus(state) {
-        const txt = document.getElementById('statusTxt');
-        const dot = document.getElementById('syncDot');
-        dot.className = 'sync-dot ' + state;
-        if(state === 'syncing') txt.innerText = '同步中...';
-        else if(state === 'online') txt.innerText = '已同步';
-        else if(state === 'error') txt.innerText = '同步失败';
-        else if(state === 'ready') txt.innerText = '准备就绪';
-    }
-
-    function esc(s) { return s ? s.replace(/</g, "&lt;") : ''; }
-
-    // --- 设置逻辑 ---
-    window.showSettings = () => document.getElementById('settingModal').style.display = 'flex';
-    window.closeSettings = () => document.getElementById('settingModal').style.display = 'none';
-    window.saveConfig = () => {
-        store.config.token = document.getElementById('cfgToken').value.trim();
-        store.config.user = document.getElementById('cfgUser').value.trim();
-        store.config.repo = document.getElementById('cfgRepo').value.trim();
-        localStorage.setItem('gh_token', store.config.token);
-        localStorage.setItem('gh_user', store.config.user);
-        localStorage.setItem('gh_repo', store.config.repo);
-        closeSettings();
-        performFullSync();
-    };
-
-    // 填充设置项
-    document.getElementById('cfgToken').value = store.config.token;
-    document.getElementById('cfgUser').value = store.config.user;
-    document.getElementById('cfgRepo').value = store.config.repo;
-
-    init();
+init();
 </script>
 </body>
 </html>
