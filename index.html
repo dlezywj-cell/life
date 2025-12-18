@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Life Manager Pro</title>
+    <title>Life Manager Pro (Fixed)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -71,7 +71,8 @@
         .mini-tags { display: flex; gap: 8px; }
         .mini-tag { font-size: 12px; padding: 4px 10px; border-radius: 12px; background: #f0f0f0; color: #666; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
         .mini-tag.active { background: #e9f9f0; color: #07c160; border-color: #07c160; font-weight: 500; }
-        .btn-send { background: var(--wx-green); color: white; border: none; padding: 5px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-send { background: var(--wx-green); color: white; border: none; padding: 5px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;}
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Matrix Grid */
         .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -127,6 +128,7 @@
         .tag-work { color: #576b95; background: #edf2fa; }
         .tag-life { color: #e6a23c; background: #fbf6ec; }
         .tag-health { color: #07c160; background: #ecf9f2; }
+        .tag-undefined { color: #999; background: #eee; }
         
         .tag-due-critical { color: white; background: var(--wx-red); font-weight: bold; }
         .tag-due-warning { color: white; background: var(--wx-orange); }
@@ -247,7 +249,7 @@
 </div>
 
 <script>
-    // 核心数据
+    // --- 核心状态变量 ---
     let tasks = [];
     let config = { 
         token: localStorage.getItem('gh_token'), 
@@ -259,14 +261,39 @@
     let selectedCategory = 'work';
     let fileSha = null;
     let actionTargetId = null;
+    
+    // 关键修复变量：防止竞态和重复
+    let lastActionTime = 0; 
+    let isSyncing = false;
 
+    // --- 初始化 ---
     document.addEventListener('DOMContentLoaded', () => {
+        // 读取本地存储
         const local = localStorage.getItem('lm_data');
-        if(local) tasks = JSON.parse(local);
-        render();
-        if(config.token) fetchGitHub();
+        if(local) {
+            try {
+                tasks = JSON.parse(local);
+                // 启动时立即去重，清理历史脏数据
+                tasks = deduplicate(tasks);
+            } catch(e) { tasks = []; }
+        }
+        
+        render(); // 立即渲染
+        
+        // 延时同步
+        if(config.token) setTimeout(fetchGitHub, 500);
         else if(tasks.length === 0) openSettings();
     });
+
+    // --- 辅助功能：去重 ---
+    function deduplicate(arr) {
+        const seen = new Set();
+        return arr.filter(el => {
+            const duplicate = seen.has(el.id);
+            seen.add(el.id);
+            return !duplicate;
+        });
+    }
 
     window.selectCat = function(cat) {
         selectedCategory = cat;
@@ -274,9 +301,9 @@
         document.getElementById(`chip-${cat}`).classList.add('active');
     };
 
-    // --- 核心修复：重绘函数 ---
+    // --- 核心渲染引擎 (修复了分类污染和残影) ---
     function render() {
-        // 1. 内存中准备HTML字符串，而不是直接操作DOM（防止残影）
+        // 1. 初始化容器字符串 (每次必须清空)
         let htmlMap = { q1: '', q2: '', q3: '', q4: '', arch: '' };
         let count = { q1: 0, q2: 0, q3: 0, q4: 0, arch: 0 };
         let tabCounts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
@@ -284,32 +311,33 @@
         const isArchive = currentFilter === 'archive';
         const today = new Date(); today.setHours(0,0,0,0);
 
-        // 2. 预先排序
+        // 2. 排序 (任务按优先级和日期排序)
         let sortedTasks = [...tasks].sort((a, b) => {
+            if(a.completed && b.completed) return (b.completedAt || 0) < (a.completedAt || 0) ? -1 : 1;
             const getW = (t) => t.deadline ? new Date(t.deadline).getTime() : 9999999999999;
             if(getW(a) !== getW(b)) return getW(a) - getW(b);
             return b.id - a.id;
         });
 
-        // 3. 循环生成 HTML
+        // 3. 遍历生成
         sortedTasks.forEach(t => {
-            // 统计 (无论是否显示，都要统计总数给Tab看)
+            // 统计总数 (不受过滤器影响)
             if(t.completed) tabCounts.archive++;
             else {
                 tabCounts.all++;
                 if(t.category) tabCounts[t.category]++;
             }
 
-            // 过滤判断 (非常严格：不符合当前Tab的直接跳过，不生成HTML)
+            // 严格过滤逻辑
             if(isArchive) {
                 if(!t.completed) return;
             } else {
                 if(t.completed) return;
-                // 关键修复：只要当前不是all，且分类不匹配，直接跳过
+                // 修复：如果当前Tab不是All，且任务分类不匹配，坚决不渲染
                 if(currentFilter !== 'all' && t.category !== currentFilter) return;
             }
 
-            // 计算属性
+            // 生成 UI 内容
             let dateText = '', rowClass = `task-row ${isArchive ? 'arch-row' : ''}`, titleClass = 't-title', dateTagClass = 'tag-due-normal';
             if(t.deadline && !t.completed) {
                 const diff = Math.ceil((new Date(t.deadline) - today)/86400000);
@@ -319,7 +347,8 @@
                 else { dateText = `${diff}天后`; }
             }
 
-            let tags = `<span class="tag tag-${t.category}">${{'work':'投资','life':'生活','health':'健康'}[t.category]}</span>`;
+            const catNames = {'work':'投资','life':'生活','health':'健康'};
+            let tags = `<span class="tag tag-${t.category}">${catNames[t.category] || '其他'}</span>`;
             if(dateText) tags += `<span class="tag ${dateTagClass}">${dateText}</span>`;
 
             let dateInfo = isArchive ? `<div class="t-dates"><span>🌱 ${new Date(t.createdAt||t.id).toLocaleDateString()}</span> <span>🏁 ${t.completedAt?new Date(t.completedAt).toLocaleDateString():'-'}</span></div>` : '';
@@ -328,7 +357,6 @@
                 ? `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-undo"></i></button><button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`
                 : `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-check-circle"></i></button><button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`;
 
-            // 构造单行 HTML
             const itemHtml = `
                 <li class="${rowClass}" id="task-${t.id}">
                     <div class="t-main">
@@ -341,25 +369,25 @@
                 </li>
             `;
 
-            // 分配到对应字符串容器
-            if(!isArchive) {
+            // 分配到容器
+            if(isArchive) {
+                htmlMap.arch += itemHtml; count.arch++;
+            } else {
                 if(t.urgent && t.important) { htmlMap.q1 += itemHtml; count.q1++; }
                 else if(!t.urgent && t.important) { htmlMap.q2 += itemHtml; count.q2++; }
                 else if(t.urgent && !t.important) { htmlMap.q3 += itemHtml; count.q3++; }
                 else { htmlMap.q4 += itemHtml; count.q4++; }
-            } else {
-                htmlMap.arch += itemHtml; count.arch++;
             }
         });
 
-        // 4. 一次性写入 DOM (彻底解决重复问题)
+        // 4. 写入 DOM
         const setHTML = (id, html, isEmpty) => {
             const el = document.getElementById(id);
-            if(el) el.innerHTML = isEmpty ? '<div class="empty-tip" style="padding:10px 0;">空</div>' : html;
+            if(el) el.innerHTML = isEmpty ? '<div class="empty-tip">暂无事项</div>' : html;
         };
 
         if(isArchive) {
-            document.getElementById('archiveList').innerHTML = count.arch === 0 ? '<div class="empty-tip">暂无历史记录</div>' : htmlMap.arch;
+            setHTML('archiveList', htmlMap.arch, count.arch === 0);
         } else {
             setHTML('list-q1', htmlMap.q1, count.q1 === 0);
             setHTML('list-q2', htmlMap.q2, count.q2 === 0);
@@ -367,13 +395,13 @@
             setHTML('list-q4', htmlMap.q4, count.q4 === 0);
         }
 
-        // 5. 更新界面状态
+        // 5. 切换视图显隐
         document.getElementById('viewMatrix').style.display = isArchive ? 'none' : 'grid';
         document.getElementById('inputArea').style.display = isArchive ? 'none' : 'flex';
         document.getElementById('viewArchive').style.display = isArchive ? 'block' : 'none';
 
+        // 6. 更新 Tab 样式和数字
         document.querySelectorAll('.filter-item').forEach(el => el.classList.toggle('active', el.dataset.filter === currentFilter));
-        
         document.getElementById('cnt-all').innerText = tabCounts.all;
         document.getElementById('cnt-work').innerText = tabCounts.work;
         document.getElementById('cnt-life').innerText = tabCounts.life;
@@ -383,13 +411,17 @@
 
     // --- 交互逻辑 ---
     window.addTask = function() {
+        const btn = document.querySelector('.btn-send');
+        btn.disabled = true; // 防抖
+
         const title = document.getElementById('title').value.trim();
-        if(!title) return alert('请填写标题');
+        if(!title) { btn.disabled = false; return alert('请填写标题'); }
+        
         tasks.push({
             id: Date.now(),
             createdAt: new Date().toISOString(),
             title: title,
-            category: selectedCategory, // 这里使用当前选中的Input分类
+            category: selectedCategory, // 确保使用当前选中分类
             notes: document.getElementById('notes').value.trim(),
             deadline: document.getElementById('deadline').value,
             urgent: document.getElementById('urgent').checked,
@@ -397,14 +429,22 @@
             completed: false,
             completedAt: null
         });
+
+        // 清空输入
         document.getElementById('title').value = '';
         document.getElementById('notes').value = '';
+        
         save();
+        setTimeout(() => btn.disabled = false, 500);
     };
 
     window.toggle = function(id, btn) {
+        lastActionTime = Date.now(); // 标记操作时间
         const li = btn.closest('li');
-        if(li) li.classList.add('fade-out'); // 动画
+        const isUndo = btn.querySelector('.fa-undo');
+        
+        if(li && !isUndo) li.classList.add('fade-out');
+        
         setTimeout(() => {
             const t = tasks.find(x => x.id === id);
             if(t) { 
@@ -412,7 +452,7 @@
                 t.completedAt = t.completed ? new Date().toISOString() : null;
                 save(); 
             }
-        }, 400); // 必须等待动画播完
+        }, isUndo ? 0 : 350);
     };
 
     window.askDel = function(id) {
@@ -420,6 +460,7 @@
         document.getElementById('modalText').innerText = '确定删除这条记录吗？';
         document.getElementById('confirmModal').style.display = 'flex';
         document.getElementById('modalOkBtn').onclick = () => {
+            lastActionTime = Date.now();
             tasks = tasks.filter(x => x.id !== id);
             closeModal();
             save();
@@ -430,6 +471,7 @@
         document.getElementById('modalText').innerText = '确定清空所有归档吗？';
         document.getElementById('confirmModal').style.display = 'flex';
         document.getElementById('modalOkBtn').onclick = () => {
+            lastActionTime = Date.now();
             tasks = tasks.filter(x => !x.completed);
             closeModal();
             save();
@@ -441,25 +483,46 @@
     function esc(s) { return s ? s.replace(/</g,'&lt;') : ''; }
 
     function save() {
+        lastActionTime = Date.now();
         localStorage.setItem('lm_data', JSON.stringify(tasks));
         render();
         pushGitHub();
     }
 
+    // --- GitHub 同步 (竞态保护) ---
     async function fetchGitHub() {
+        if(!config.token || isSyncing) return;
+        
+        // 保护机制：如果用户10秒内有过操作，不拉取云端数据，防止覆盖
+        if(Date.now() - lastActionTime < 10000) return;
+
         try {
+            isSyncing = true;
             document.getElementById('syncStatus').innerText = '同步中...';
             const res = await fetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${config.file}`, {
-                headers: {Authorization: `token ${config.token}`}
+                headers: {Authorization: `token ${config.token}`, 'Cache-Control': 'no-cache'}
             });
-            if(res.status===404) return pushGitHub();
+            
+            if(res.status===404) {
+                isSyncing = false;
+                return pushGitHub();
+            }
+            
             const d = await res.json();
             fileSha = d.sha;
-            tasks = JSON.parse(decodeURIComponent(escape(atob(d.content))));
+            
+            // 拉取过程中若用户操作了，放弃本次覆盖
+            if(Date.now() - lastActionTime < 5000) {
+                 isSyncing = false; return;
+            }
+
+            const cloudTasks = JSON.parse(decodeURIComponent(escape(atob(d.content))));
+            tasks = deduplicate(cloudTasks); // 下载后再次去重
             localStorage.setItem('lm_data', JSON.stringify(tasks));
             render();
             document.getElementById('syncStatus').innerText = '已同步';
         } catch(e) { console.error(e); document.getElementById('syncStatus').innerText = '同步失败'; }
+        finally { isSyncing = false; }
     }
 
     async function pushGitHub() {
@@ -467,14 +530,22 @@
         try {
             document.getElementById('syncStatus').innerText = '保存中...';
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(tasks))));
+            const body = { message: 'Update', content, sha: fileSha ? fileSha : undefined };
+            
             const res = await fetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${config.file}`, {
                 method: 'PUT',
                 headers: {Authorization: `token ${config.token}`, 'Content-Type': 'application/json'},
-                body: JSON.stringify({message:'Update', content, sha: fileSha})
+                body: JSON.stringify(body)
             });
-            const d = await res.json();
-            fileSha = d.content.sha;
-            document.getElementById('syncStatus').innerText = '云端已存';
+            
+            // 简单冲突处理：如果冲突，重新拉取（实际会因时间戳保护，下次循环处理）
+            if(res.status === 409) {
+                await fetchGitHub();
+            } else {
+                const d = await res.json();
+                fileSha = d.content.sha;
+                document.getElementById('syncStatus').innerText = '云端已存';
+            }
         } catch(e) { console.error(e); document.getElementById('syncStatus').innerText = '上传失败'; }
     }
 
