@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Life Manager v7</title>
+    <title>Life Manager Pro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -92,15 +92,15 @@
             padding: 10px 0; 
             border-bottom: 1px solid #f5f5f5; 
             display: flex; gap: 10px; 
-            /* 核心动画属性 */
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 1;
             transform: translateX(0);
-            max-height: 100px; /* 限制高度以便做折叠动画 */
+            max-height: 100px;
             overflow: hidden;
+            border-left: 3px solid transparent; 
+            padding-left: 4px;
         }
         
-        /* 消失动画：向右滑 + 变透明 + 高度塌陷 */
         .task-row.fade-out {
             opacity: 0;
             transform: translateX(100%);
@@ -113,7 +113,7 @@
 
         .task-row:last-child { border-bottom: none; }
         
-        .task-urgent-critical { animation: breathe-red 2s infinite ease-in-out; }
+        .task-urgent-critical { animation: breathe-red 2s infinite ease-in-out; border-left-color: var(--wx-red); }
         .text-critical { color: var(--wx-red); font-weight: 700; }
         .text-warning { color: var(--wx-orange); font-weight: 600; }
 
@@ -220,6 +220,7 @@
     </div>
 </div>
 
+<!-- Modal 弹窗 -->
 <div id="confirmModal" class="modal-mask">
     <div class="confirm-box">
         <div class="c-content" id="modalText">确认删除吗？</div>
@@ -230,6 +231,7 @@
     </div>
 </div>
 
+<!-- 设置面板 -->
 <div id="settingsPanel" class="settings-layer">
     <div class="set-header">
         <i class="fas fa-arrow-left" onclick="closeSettings()" style="font-size:18px; cursor:pointer;"></i>
@@ -245,6 +247,7 @@
 </div>
 
 <script>
+    // 核心数据
     let tasks = [];
     let config = { 
         token: localStorage.getItem('gh_token'), 
@@ -271,129 +274,106 @@
         document.getElementById(`chip-${cat}`).classList.add('active');
     };
 
+    // --- 核心修复：重绘函数 ---
     function render() {
-        // --- 核心修复：强制清空所有列表 ---
-        // 这是解决重复问题的关键，每次重绘前把旧的全部删掉
-        document.getElementById('list-q1').innerHTML = '';
-        document.getElementById('list-q2').innerHTML = '';
-        document.getElementById('list-q3').innerHTML = '';
-        document.getElementById('list-q4').innerHTML = '';
-        document.getElementById('archiveList').innerHTML = '';
+        // 1. 内存中准备HTML字符串，而不是直接操作DOM（防止残影）
+        let htmlMap = { q1: '', q2: '', q3: '', q4: '', arch: '' };
+        let count = { q1: 0, q2: 0, q3: 0, q4: 0, arch: 0 };
+        let tabCounts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
         
         const isArchive = currentFilter === 'archive';
-        document.getElementById('viewMatrix').style.display = isArchive ? 'none' : 'grid';
-        document.getElementById('inputArea').style.display = isArchive ? 'none' : 'flex';
-        document.getElementById('viewArchive').style.display = isArchive ? 'block' : 'none';
-
         const today = new Date(); today.setHours(0,0,0,0);
-        let tabCounts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
-        let count = {q1:0, q2:0, q3:0, q4:0, arch:0};
 
-        // 1. 统计数量
-        tasks.forEach(t => {
-            if(t.completed) tabCounts.archive++;
-            else {
-                tabCounts.all++;
-                if(t.category) tabCounts[t.category]++;
-            }
-        });
-
-        // 2. 排序：逾期 > 截止日期近 > 截止日期远 > 无日期
+        // 2. 预先排序
         let sortedTasks = [...tasks].sort((a, b) => {
             const getW = (t) => t.deadline ? new Date(t.deadline).getTime() : 9999999999999;
             if(getW(a) !== getW(b)) return getW(a) - getW(b);
             return b.id - a.id;
         });
 
-        // 3. 渲染循环
+        // 3. 循环生成 HTML
         sortedTasks.forEach(t => {
-            // 过滤器检查
+            // 统计 (无论是否显示，都要统计总数给Tab看)
+            if(t.completed) tabCounts.archive++;
+            else {
+                tabCounts.all++;
+                if(t.category) tabCounts[t.category]++;
+            }
+
+            // 过滤判断 (非常严格：不符合当前Tab的直接跳过，不生成HTML)
             if(isArchive) {
                 if(!t.completed) return;
             } else {
                 if(t.completed) return;
+                // 关键修复：只要当前不是all，且分类不匹配，直接跳过
                 if(currentFilter !== 'all' && t.category !== currentFilter) return;
             }
 
-            // 目标容器
-            let tid = 'archiveList';
-            if(!isArchive) {
-                if(t.urgent && t.important) { tid = 'list-q1'; count.q1++; }
-                else if(!t.urgent && t.important) { tid = 'list-q2'; count.q2++; }
-                else if(t.urgent && !t.important) { tid = 'list-q3'; count.q3++; }
-                else { tid = 'list-q4'; count.q4++; }
-            } else { count.arch++; }
-
-            // 样式逻辑
-            let rowClass = `task-row ${isArchive ? 'arch-row' : ''}`;
-            let titleClass = 't-title';
-            let dateTagClass = 'tag-due-normal';
-            let dateText = '';
-            
+            // 计算属性
+            let dateText = '', rowClass = `task-row ${isArchive ? 'arch-row' : ''}`, titleClass = 't-title', dateTagClass = 'tag-due-normal';
             if(t.deadline && !t.completed) {
                 const diff = Math.ceil((new Date(t.deadline) - today)/86400000);
-                if(diff < 0) {
-                    dateText = `逾期${Math.abs(diff)}天`;
-                    rowClass += ' task-urgent-critical';
-                    titleClass += ' text-critical';
-                    dateTagClass = 'tag-due-critical';
-                } else if(diff === 0) {
-                    dateText = '今天截止';
-                    rowClass += ' task-urgent-critical';
-                    titleClass += ' text-critical';
-                    dateTagClass = 'tag-due-critical';
-                } else if(diff <= 3) {
-                    dateText = `${diff}天后`;
-                    titleClass += ' text-warning';
-                    dateTagClass = 'tag-due-warning';
-                } else {
-                    dateText = `${diff}天后`;
-                }
+                if(diff < 0) { dateText = `逾期${Math.abs(diff)}天`; rowClass += ' task-urgent-critical'; titleClass += ' text-critical'; dateTagClass = 'tag-due-critical'; }
+                else if(diff === 0) { dateText = '今天截止'; rowClass += ' task-urgent-critical'; titleClass += ' text-critical'; dateTagClass = 'tag-due-critical'; }
+                else if(diff <= 3) { dateText = `${diff}天后`; titleClass += ' text-warning'; dateTagClass = 'tag-due-warning'; }
+                else { dateText = `${diff}天后`; }
             }
 
             let tags = `<span class="tag tag-${t.category}">${{'work':'投资','life':'生活','health':'健康'}[t.category]}</span>`;
             if(dateText) tags += `<span class="tag ${dateTagClass}">${dateText}</span>`;
 
-            let dateInfo = '';
-            if(isArchive) {
-                const createDate = new Date(t.createdAt || t.id).toLocaleDateString();
-                const finishDate = t.completedAt ? new Date(t.completedAt).toLocaleDateString() : '未知';
-                dateInfo = `<div class="t-dates"><span>🌱 创建 ${createDate}</span> <span>🏁 完成 ${finishDate}</span></div>`;
-            }
+            let dateInfo = isArchive ? `<div class="t-dates"><span>🌱 ${new Date(t.createdAt||t.id).toLocaleDateString()}</span> <span>🏁 ${t.completedAt?new Date(t.completedAt).toLocaleDateString():'-'}</span></div>` : '';
 
             let btns = isArchive 
-                ? `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-undo"></i></button>
-                   <button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`
-                : `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-check-circle"></i></button>
-                   <button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`;
+                ? `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-undo"></i></button><button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`
+                : `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-check-circle"></i></button><button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`;
 
-            const li = document.createElement('li');
-            li.className = rowClass;
-            li.innerHTML = `
-                <div class="t-main">
-                    <div class="${titleClass}" style="${isArchive?'text-decoration:line-through;color:#aaa;font-weight:normal;animation:none;':''}">${esc(t.title)}</div>
-                    ${t.notes ? `<div class="t-note">${esc(t.notes)}</div>` : ''}
-                    <div class="t-tags">${tags}</div>
-                    ${dateInfo}
-                </div>
-                <div class="t-actions">${btns}</div>
+            // 构造单行 HTML
+            const itemHtml = `
+                <li class="${rowClass}" id="task-${t.id}">
+                    <div class="t-main">
+                        <div class="${titleClass}" style="${isArchive?'text-decoration:line-through;color:#aaa;font-weight:normal;animation:none;':''}">${esc(t.title)}</div>
+                        ${t.notes ? `<div class="t-note">${esc(t.notes)}</div>` : ''}
+                        <div class="t-tags">${tags}</div>
+                        ${dateInfo}
+                    </div>
+                    <div class="t-actions">${btns}</div>
+                </li>
             `;
-            // 确保找到容器再添加
-            const container = document.getElementById(tid);
-            if(container) container.appendChild(li);
+
+            // 分配到对应字符串容器
+            if(!isArchive) {
+                if(t.urgent && t.important) { htmlMap.q1 += itemHtml; count.q1++; }
+                else if(!t.urgent && t.important) { htmlMap.q2 += itemHtml; count.q2++; }
+                else if(t.urgent && !t.important) { htmlMap.q3 += itemHtml; count.q3++; }
+                else { htmlMap.q4 += itemHtml; count.q4++; }
+            } else {
+                htmlMap.arch += itemHtml; count.arch++;
+            }
         });
 
-        // 4. 空状态填充
-        if(isArchive && count.arch === 0) document.getElementById('archiveList').innerHTML = '<div class="empty-tip">暂无历史记录</div>';
-        if(!isArchive) ['q1','q2','q3','q4'].forEach(k => {
-            const c = document.getElementById(`list-${k}`);
-            if(c && c.innerHTML === '') c.innerHTML = '<div class="empty-tip" style="padding:10px 0;">空</div>';
-        });
+        // 4. 一次性写入 DOM (彻底解决重复问题)
+        const setHTML = (id, html, isEmpty) => {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = isEmpty ? '<div class="empty-tip" style="padding:10px 0;">空</div>' : html;
+        };
 
-        // 5. 更新Tab
-        document.querySelectorAll('.filter-item').forEach(el => {
-            el.classList.toggle('active', el.dataset.filter === currentFilter);
-        });
+        if(isArchive) {
+            document.getElementById('archiveList').innerHTML = count.arch === 0 ? '<div class="empty-tip">暂无历史记录</div>' : htmlMap.arch;
+        } else {
+            setHTML('list-q1', htmlMap.q1, count.q1 === 0);
+            setHTML('list-q2', htmlMap.q2, count.q2 === 0);
+            setHTML('list-q3', htmlMap.q3, count.q3 === 0);
+            setHTML('list-q4', htmlMap.q4, count.q4 === 0);
+        }
+
+        // 5. 更新界面状态
+        document.getElementById('viewMatrix').style.display = isArchive ? 'none' : 'grid';
+        document.getElementById('inputArea').style.display = isArchive ? 'none' : 'flex';
+        document.getElementById('viewArchive').style.display = isArchive ? 'block' : 'none';
+
+        document.querySelectorAll('.filter-item').forEach(el => el.classList.toggle('active', el.dataset.filter === currentFilter));
+        
         document.getElementById('cnt-all').innerText = tabCounts.all;
         document.getElementById('cnt-work').innerText = tabCounts.work;
         document.getElementById('cnt-life').innerText = tabCounts.life;
@@ -401,7 +381,7 @@
         document.getElementById('cnt-archive').innerText = tabCounts.archive;
     }
 
-    // --- 核心修复：动画逻辑 ---
+    // --- 交互逻辑 ---
     window.addTask = function() {
         const title = document.getElementById('title').value.trim();
         if(!title) return alert('请填写标题');
@@ -409,7 +389,7 @@
             id: Date.now(),
             createdAt: new Date().toISOString(),
             title: title,
-            category: selectedCategory,
+            category: selectedCategory, // 这里使用当前选中的Input分类
             notes: document.getElementById('notes').value.trim(),
             deadline: document.getElementById('deadline').value,
             urgent: document.getElementById('urgent').checked,
@@ -422,13 +402,9 @@
         save();
     };
 
-    window.toggle = function(id, btnElement) {
-        // 1. 找到对应的行
-        const li = btnElement.closest('li');
-        // 2. 添加 CSS 动画类
-        if(li) li.classList.add('fade-out');
-        
-        // 3. 等待动画结束(500ms)后再处理数据
+    window.toggle = function(id, btn) {
+        const li = btn.closest('li');
+        if(li) li.classList.add('fade-out'); // 动画
         setTimeout(() => {
             const t = tasks.find(x => x.id === id);
             if(t) { 
@@ -436,7 +412,7 @@
                 t.completedAt = t.completed ? new Date().toISOString() : null;
                 save(); 
             }
-        }, 500);
+        }, 400); // 必须等待动画播完
     };
 
     window.askDel = function(id) {
