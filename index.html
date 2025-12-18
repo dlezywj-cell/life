@@ -26,8 +26,8 @@
             --q3: #ff9500;
             --q4: #8e8e93;
 
-            --shadow-card: 0 4px 12px rgba(0,0,0,0.06);
-            --shadow-float: 0 8px 24px rgba(0,0,0,0.12);
+            --shadow-card: 0 4px 12px rgba(0,0,0,0.04);
+            --shadow-float: 0 12px 30px rgba(0,0,0,0.12);
             --radius-l: 18px;
             --radius-m: 12px;
             --radius-s: 8px;
@@ -210,7 +210,7 @@
 
         /* 归档模式美化 */
         .archive-view .task { opacity: 1; } 
-        .archive-view .t-txt { text-decoration: none; color: #666; } /* 不用删除线，改用变灰 */
+        .archive-view .t-txt { text-decoration: none; color: #666; } 
         .date-meta {
             display: flex; flex-direction: column; gap: 2px; margin-top: 6px;
         }
@@ -389,6 +389,8 @@
 
         if(store.config.token) {
             setStatus('准备就绪');
+            // 只有本地为空时才强制从云端拉取，防止覆盖刚输入的数据
+            // 或者页面刚加载时拉取一次
             fetchFromCloud(); 
         } else {
             setStatus('本地模式');
@@ -412,7 +414,7 @@
                 important: document.getElementById('isImp').checked,
                 completed: false,
                 createdAt: new Date().toISOString(),
-                completedAt: null // 初始化完成时间
+                completedAt: null
             };
 
             store.tasks.push(task);
@@ -427,7 +429,6 @@
         const t = store.tasks.find(x => x.id == id);
         if(t) {
             t.completed = !t.completed;
-            // 逻辑修改：记录完成时间
             if (t.completed) {
                 t.completedAt = new Date().toISOString();
             } else {
@@ -497,18 +498,16 @@
             }
             const catName = { work:'投资', life:'生活', health:'健康' }[t.category] || '其他';
             
-            // 渲染按钮
             const btns = store.filter === 'archive' 
                 ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})" title="撤销"><i class="fas fa-undo"></i></button>
                    <button class="icon-btn del" onclick="removeTask(${t.id})" title="彻底删除"><i class="fas fa-trash-alt"></i></button>`
                 : `<button class="icon-btn ok" onclick="toggleStatus(${t.id})" title="完成"><i class="fas fa-check-circle"></i></button>
                    <button class="icon-btn del" onclick="removeTask(${t.id})" title="删除"><i class="fas fa-trash"></i></button>`;
 
-            // 归档模式下，额外显示日期信息
             let archiveMeta = '';
             if (store.filter === 'archive') {
                 const createdStr = formatDate(t.createdAt);
-                const completedStr = formatDate(t.completedAt || new Date().toISOString()); // 兼容旧数据无时间
+                const completedStr = formatDate(t.completedAt || new Date().toISOString());
                 archiveMeta = `
                     <div class="date-meta">
                         <div class="meta-row"><i class="fas fa-plus-circle"></i> 创建于: ${createdStr}</div>
@@ -577,7 +576,22 @@
 
     function esc(s) { return s ? s.replace(/</g, "&lt;") : ''; }
 
-    // --- 核心同步逻辑 (保持原样) ---
+    // --- 核心同步逻辑 (修复版) ---
+    
+    // 获取云端的最新SHA（不覆盖本地数据），用于修复冲突
+    async function getRemoteSha() {
+        try {
+            // 加上时间戳 ?t=... 强制不缓存
+            const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}?t=${new Date().getTime()}`;
+            const res = await fetch(url, { headers: { Authorization: `token ${store.config.token}`, 'Cache-Control': 'no-cache' }});
+            if (res.ok) {
+                const data = await res.json();
+                return data.sha;
+            }
+        } catch(e) { console.error("GetSHA error", e); }
+        return null;
+    }
+
     async function fetchFromCloud() {
         if(!store.config.token) return;
         
@@ -585,12 +599,14 @@
             setStatus('检查云端...');
             store.isSyncing = true;
             
-            const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`;
+            // 加上时间戳防止缓存 404
+            const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}?t=${new Date().getTime()}`;
             const res = await fetch(url, { headers: { Authorization: `token ${store.config.token}`, 'Cache-Control': 'no-cache' }});
             
             if(res.status === 404) {
                 console.log("云端无文件，准备初次上传...");
                 store.isSyncing = false; 
+                store.fileSha = null; // 确保SHA为空
                 return syncToCloud(); 
             }
             if(!res.ok) throw new Error(`Err ${res.status}`);
@@ -613,9 +629,9 @@
         }
     }
 
-    async function syncToCloud() {
+    async function syncToCloud(retryCount = 0) {
         if(!store.config.token) return;
-        if(store.isSyncing) return;
+        if(store.isSyncing && retryCount === 0) return; // 如果正在同步且不是重试，则跳过
 
         store.isSyncing = true;
         store.needSyncAgain = false;
@@ -636,25 +652,37 @@
 
             if(res.ok) {
                 const data = await res.json();
-                store.fileSha = data.content.sha;
+                store.fileSha = data.content.sha; // 更新最新的SHA
                 setStatus('云端已存');
-            } else if(res.status === 409) {
-                console.warn("冲突重试...");
-                store.isSyncing = false; 
-                await fetchFromCloud(); 
-                return; 
+            } 
+            // 409: Conflict (SHA不对), 422: Unprocessable (文件存在但未传SHA)
+            else if(res.status === 409 || res.status === 422) {
+                console.warn(`检测到冲突 (${res.status})，正在自动修复...`);
+                // 获取最新的SHA，但不覆盖本地数据
+                const realSha = await getRemoteSha();
+                if(realSha) {
+                    store.fileSha = realSha;
+                    if(retryCount < 2) {
+                        // 拿到新SHA后，立即重试上传
+                        return syncToCloud(retryCount + 1);
+                    }
+                }
+                setStatus(`同步冲突 ${res.status}`);
             } else {
                 console.warn("Upload failed:", res.status);
-                setStatus('上传失败'); 
+                setStatus(`Err ${res.status}`); 
             }
 
         } catch(e) {
             console.error("Sync Error:", e);
             setStatus('离线'); 
         } finally {
-            store.isSyncing = false;
-            if(store.needSyncAgain) {
-                setTimeout(triggerSync, 500);
+            // 如果不是在递归重试中，才关闭锁
+            if (retryCount === 0) {
+                store.isSyncing = false;
+                if(store.needSyncAgain) {
+                    setTimeout(triggerSync, 500);
+                }
             }
         }
     }
@@ -666,7 +694,6 @@
         document.getElementById('cfgRepo').value = store.config.repo;
         const modal = document.getElementById('settingModal');
         modal.style.display = 'flex';
-        // 强制重绘以触发动画
         modal.offsetHeight; 
         modal.classList.add('show');
     };
