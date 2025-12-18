@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Life Manager</title>
+    <title>Life Manager v7</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            /* 微信风格配色 */
             --wx-bg: #ededed;          
             --wx-header: #f7f7f7;      
             --wx-card: #ffffff;        
@@ -17,7 +16,6 @@
             --wx-text: #111111;        
             --wx-text-sec: #7f7f7f;
             
-            /* 象限标识色 */
             --q1-color: #fa5151; 
             --q2-color: #576b95;
             --q3-color: #e6a23c;
@@ -38,18 +36,18 @@
 
         /* 呼吸动画 */
         @keyframes breathe-red {
-            0% { box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-color: transparent; }
-            50% { box-shadow: 0 0 8px rgba(250, 81, 81, 0.4); border-color: rgba(250, 81, 81, 0.6); }
-            100% { box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-color: transparent; }
+            0% { box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-left: 3px solid transparent; }
+            50% { box-shadow: 0 0 8px rgba(250, 81, 81, 0.4); border-left: 3px solid var(--wx-red); }
+            100% { box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-left: 3px solid transparent; }
         }
 
-        /* --- Header --- */
+        /* Header */
         header { background: var(--wx-header); height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #dcdcdc; flex-shrink: 0; }
         .app-title { font-size: 16px; font-weight: 600; }
         .header-actions { font-size: 12px; color: #999; display: flex; align-items: center; gap: 15px;}
         .header-actions i { font-size: 16px; color: #333; cursor: pointer; }
 
-        /* --- Tabs (过滤器) --- */
+        /* Filter Tabs */
         .filter-bar { background: var(--wx-header); display: flex; padding: 0 12px; border-bottom: 1px solid #dcdcdc; overflow-x: auto; flex-shrink: 0; gap: 24px; height: 44px; align-items: center; }
         .filter-item { font-size: 14px; color: var(--wx-text-sec); cursor: pointer; white-space: nowrap; height: 100%; display: flex; align-items: center; position: relative; }
         .filter-item.active { color: var(--wx-green); font-weight: 600; }
@@ -57,10 +55,10 @@
         .filter-count { font-size: 10px; margin-left: 4px; background: #e0e0e0; padding: 0 4px; border-radius: 4px; color: #666; }
         .filter-item.active .filter-count { background: #d1f2d9; color: var(--wx-green); }
 
-        /* --- Scroll Area --- */
+        /* Main Scroll */
         .main-scroll { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
 
-        /* --- Input Card --- */
+        /* Input Card */
         .input-card { background: var(--wx-card); border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
         .input-title { width: 100%; border: none; font-size: 16px; outline: none; font-weight: 500; }
         .input-notes { width: 100%; border: none; outline: none; resize: none; font-size: 14px; color: #666; height: 24px; padding-bottom: 4px; border-bottom: 1px solid #f0f0f0; font-family: inherit; }
@@ -75,7 +73,7 @@
         .mini-tag.active { background: #e9f9f0; color: #07c160; border-color: #07c160; font-weight: 500; }
         .btn-send { background: var(--wx-green); color: white; border: none; padding: 5px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
 
-        /* --- Matrix --- */
+        /* Matrix Grid */
         .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         @media (max-width: 600px) { .matrix-grid { grid-template-columns: 1fr; } }
         .q-box { background: var(--wx-card); border-radius: 8px; padding: 12px; min-height: 180px; }
@@ -87,12 +85,35 @@
         .q3 .q-head { color: var(--q3-color); } .q3 .dot { background: var(--q3-color); }
         .q4 .q-head { color: var(--q4-color); } .q4 .dot { background: var(--q4-color); }
 
-        /* Tasks */
+        /* Task Items */
         .task-list { list-style: none; padding: 0; margin: 0; }
-        .task-row { padding: 10px 0; border-bottom: 1px solid #f5f5f5; display: flex; gap: 10px; transition: all 0.3s; border-left: 3px solid transparent; padding-left: 4px;}
+        
+        .task-row { 
+            padding: 10px 0; 
+            border-bottom: 1px solid #f5f5f5; 
+            display: flex; gap: 10px; 
+            /* 核心动画属性 */
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: translateX(0);
+            max-height: 100px; /* 限制高度以便做折叠动画 */
+            overflow: hidden;
+        }
+        
+        /* 消失动画：向右滑 + 变透明 + 高度塌陷 */
+        .task-row.fade-out {
+            opacity: 0;
+            transform: translateX(100%);
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+            margin: 0;
+        }
+
         .task-row:last-child { border-bottom: none; }
         
-        .task-urgent-critical { animation: breathe-red 2s infinite ease-in-out; border-left-color: var(--wx-red); }
+        .task-urgent-critical { animation: breathe-red 2s infinite ease-in-out; }
         .text-critical { color: var(--wx-red); font-weight: 700; }
         .text-warning { color: var(--wx-orange); font-weight: 600; }
 
@@ -113,8 +134,8 @@
 
         .t-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
         .act-btn { border: none; background: transparent; font-size: 16px; color: #ccc; cursor: pointer; padding: 2px 6px; }
-        .act-btn.done:hover { color: var(--wx-green); }
-        .act-btn.del:hover { color: var(--wx-red); }
+        .act-btn.done:hover { color: var(--wx-green); transform: scale(1.1); transition: 0.2s;}
+        .act-btn.del:hover { color: var(--wx-red); transform: scale(1.1); transition: 0.2s;}
 
         /* Modal & Settings */
         .modal-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; justify-content: center; align-items: center; }
@@ -174,19 +195,19 @@
     <div id="viewMatrix" class="matrix-grid">
         <div class="q-box q1" id="q1">
             <div class="q-head"><div class="dot"></div> 马上做</div>
-            <ul class="task-list"></ul>
+            <ul class="task-list" id="list-q1"></ul>
         </div>
         <div class="q-box q2" id="q2">
             <div class="q-head"><div class="dot"></div> 计划做</div>
-            <ul class="task-list"></ul>
+            <ul class="task-list" id="list-q2"></ul>
         </div>
         <div class="q-box q3" id="q3">
             <div class="q-head"><div class="dot"></div> 抽空做</div>
-            <ul class="task-list"></ul>
+            <ul class="task-list" id="list-q3"></ul>
         </div>
         <div class="q-box q4" id="q4">
             <div class="q-head"><div class="dot"></div> 备忘录</div>
-            <ul class="task-list"></ul>
+            <ul class="task-list" id="list-q4"></ul>
         </div>
     </div>
 
@@ -199,7 +220,6 @@
     </div>
 </div>
 
-<!-- Modal 弹窗 -->
 <div id="confirmModal" class="modal-mask">
     <div class="confirm-box">
         <div class="c-content" id="modalText">确认删除吗？</div>
@@ -210,7 +230,6 @@
     </div>
 </div>
 
-<!-- 设置面板 -->
 <div id="settingsPanel" class="settings-layer">
     <div class="set-header">
         <i class="fas fa-arrow-left" onclick="closeSettings()" style="font-size:18px; cursor:pointer;"></i>
@@ -253,53 +272,59 @@
     };
 
     function render() {
-        // 清空列表
-        document.querySelectorAll('.task-list').forEach(el => el.innerHTML = '');
+        // --- 核心修复：强制清空所有列表 ---
+        // 这是解决重复问题的关键，每次重绘前把旧的全部删掉
+        document.getElementById('list-q1').innerHTML = '';
+        document.getElementById('list-q2').innerHTML = '';
+        document.getElementById('list-q3').innerHTML = '';
+        document.getElementById('list-q4').innerHTML = '';
+        document.getElementById('archiveList').innerHTML = '';
         
-        // 模式判断
         const isArchive = currentFilter === 'archive';
         document.getElementById('viewMatrix').style.display = isArchive ? 'none' : 'grid';
         document.getElementById('inputArea').style.display = isArchive ? 'none' : 'flex';
         document.getElementById('viewArchive').style.display = isArchive ? 'block' : 'none';
 
         const today = new Date(); today.setHours(0,0,0,0);
-        let count = {q1:0, q2:0, q3:0, q4:0, arch:0};
-        
-        // 统计器 (用于更新Tab上的数字)
         let tabCounts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
+        let count = {q1:0, q2:0, q3:0, q4:0, arch:0};
 
+        // 1. 统计数量
         tasks.forEach(t => {
-            // 1. 全局统计 (不管当前Filter是什么，先算出每个分类有多少任务，方便显示在Tab上)
-            if(t.completed) {
-                tabCounts.archive++;
-            } else {
+            if(t.completed) tabCounts.archive++;
+            else {
                 tabCounts.all++;
-                if(t.category === 'work') tabCounts.work++;
-                if(t.category === 'life') tabCounts.life++;
-                if(t.category === 'health') tabCounts.health++;
+                if(t.category) tabCounts[t.category]++;
             }
+        });
 
-            // 2. 过滤器逻辑 (决定当前任务是否显示)
+        // 2. 排序：逾期 > 截止日期近 > 截止日期远 > 无日期
+        let sortedTasks = [...tasks].sort((a, b) => {
+            const getW = (t) => t.deadline ? new Date(t.deadline).getTime() : 9999999999999;
+            if(getW(a) !== getW(b)) return getW(a) - getW(b);
+            return b.id - a.id;
+        });
+
+        // 3. 渲染循环
+        sortedTasks.forEach(t => {
+            // 过滤器检查
             if(isArchive) {
-                // 如果是归档模式，只显示已完成
-                if(!t.completed) return; 
+                if(!t.completed) return;
             } else {
-                // 如果是计划模式，只显示未完成
                 if(t.completed) return;
-                // 核心修复：如果Filter不是'all'，则严格比对category
                 if(currentFilter !== 'all' && t.category !== currentFilter) return;
             }
 
-            // 3. 决定容器
+            // 目标容器
             let tid = 'archiveList';
             if(!isArchive) {
-                if(t.urgent && t.important) { tid = 'q1'; count.q1++; }
-                else if(!t.urgent && t.important) { tid = 'q2'; count.q2++; }
-                else if(t.urgent && !t.important) { tid = 'q3'; count.q3++; }
-                else { tid = 'q4'; count.q4++; }
+                if(t.urgent && t.important) { tid = 'list-q1'; count.q1++; }
+                else if(!t.urgent && t.important) { tid = 'list-q2'; count.q2++; }
+                else if(t.urgent && !t.important) { tid = 'list-q3'; count.q3++; }
+                else { tid = 'list-q4'; count.q4++; }
             } else { count.arch++; }
 
-            // 4. 生成样式
+            // 样式逻辑
             let rowClass = `task-row ${isArchive ? 'arch-row' : ''}`;
             let titleClass = 't-title';
             let dateTagClass = 'tag-due-normal';
@@ -337,9 +362,9 @@
             }
 
             let btns = isArchive 
-                ? `<button class="act-btn done" onclick="toggle(${t.id})"><i class="fas fa-undo"></i></button>
+                ? `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-undo"></i></button>
                    <button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`
-                : `<button class="act-btn done" onclick="toggle(${t.id})"><i class="fas fa-check-circle"></i></button>
+                : `<button class="act-btn done" onclick="toggle(${t.id}, this)"><i class="fas fa-check-circle"></i></button>
                    <button class="act-btn del" onclick="askDel(${t.id})"><i class="fas fa-trash"></i></button>`;
 
             const li = document.createElement('li');
@@ -353,21 +378,22 @@
                 </div>
                 <div class="t-actions">${btns}</div>
             `;
-            document.querySelector(`#${tid}`).appendChild(li);
+            // 确保找到容器再添加
+            const container = document.getElementById(tid);
+            if(container) container.appendChild(li);
         });
 
-        // 空状态
+        // 4. 空状态填充
         if(isArchive && count.arch === 0) document.getElementById('archiveList').innerHTML = '<div class="empty-tip">暂无历史记录</div>';
         if(!isArchive) ['q1','q2','q3','q4'].forEach(k => {
-            if(count[k]===0) document.querySelector(`#${k} ul`).innerHTML = '<div class="empty-tip" style="padding:10px 0;">空</div>';
+            const c = document.getElementById(`list-${k}`);
+            if(c && c.innerHTML === '') c.innerHTML = '<div class="empty-tip" style="padding:10px 0;">空</div>';
         });
 
-        // 更新 Tab 样式
+        // 5. 更新Tab
         document.querySelectorAll('.filter-item').forEach(el => {
             el.classList.toggle('active', el.dataset.filter === currentFilter);
         });
-
-        // 更新 Tab 数字
         document.getElementById('cnt-all').innerText = tabCounts.all;
         document.getElementById('cnt-work').innerText = tabCounts.work;
         document.getElementById('cnt-life').innerText = tabCounts.life;
@@ -375,7 +401,7 @@
         document.getElementById('cnt-archive').innerText = tabCounts.archive;
     }
 
-    // --- 操作逻辑 ---
+    // --- 核心修复：动画逻辑 ---
     window.addTask = function() {
         const title = document.getElementById('title').value.trim();
         if(!title) return alert('请填写标题');
@@ -396,13 +422,21 @@
         save();
     };
 
-    window.toggle = function(id) {
-        const t = tasks.find(x => x.id === id);
-        if(t) { 
-            t.completed = !t.completed; 
-            t.completedAt = t.completed ? new Date().toISOString() : null;
-            save(); 
-        }
+    window.toggle = function(id, btnElement) {
+        // 1. 找到对应的行
+        const li = btnElement.closest('li');
+        // 2. 添加 CSS 动画类
+        if(li) li.classList.add('fade-out');
+        
+        // 3. 等待动画结束(500ms)后再处理数据
+        setTimeout(() => {
+            const t = tasks.find(x => x.id === id);
+            if(t) { 
+                t.completed = !t.completed; 
+                t.completedAt = t.completed ? new Date().toISOString() : null;
+                save(); 
+            }
+        }, 500);
     };
 
     window.askDel = function(id) {
