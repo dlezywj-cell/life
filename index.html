@@ -2,113 +2,276 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Life Manager (最终稳定版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Life Manager Pro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --bg: #ededed; --card: #ffffff; --primary: #07c160; --danger: #fa5151; --warn: #ff9f00; --text: #333; --text-sec: #888;
-            --q1: #fa5151; --q2: #576b95; --q3: #e6a23c; --q4: #7f7f7f;
+            /* Apple UI Colors */
+            --bg: #f5f5f7;
+            --card: #ffffff;
+            --text-main: #1d1d1f;
+            --text-sec: #86868b;
+            --border: #d2d2d7;
+            
+            /* iOS System Colors */
+            --primary: #007aff; /* iOS Blue */
+            --success: #34c759; /* iOS Green */
+            --danger: #ff3b30;  /* iOS Red */
+            --warn: #ff9500;    /* iOS Orange */
+            
+            /* Quadrant Colors (Refined) */
+            --q1: #ff3b30; 
+            --q2: #007aff;
+            --q3: #ff9500;
+            --q4: #8e8e93;
+
+            --shadow-card: 0 4px 12px rgba(0,0,0,0.06);
+            --shadow-float: 0 8px 24px rgba(0,0,0,0.12);
+            --radius-l: 18px;
+            --radius-m: 12px;
+            --radius-s: 8px;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            -webkit-font-smoothing: antialiased; 
+        }
+
+        /* 顶部导航 (Glassmorphism) */
+        header { 
+            background: rgba(255, 255, 255, 0.72); 
+            backdrop-filter: saturate(180%) blur(20px); 
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            height: 54px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 0 20px; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .app-title { font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
+        .sync-info { font-size: 13px; color: var(--primary); font-weight: 500; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: opacity 0.2s; }
+        .sync-info:active { opacity: 0.6; }
+
+        /* 过滤器 (Segmented Control Style) */
+        .tabs-wrapper { background: var(--bg); padding: 10px 16px; flex-shrink: 0; }
+        .tabs { 
+            display: flex; 
+            gap: 20px; 
+            overflow-x: auto; 
+            align-items: center; 
+            padding-bottom: 5px;
+            scrollbar-width: none; /* Hide scrollbar */
+        }
+        .tabs::-webkit-scrollbar { display: none; }
         
-        /* 顶部导航 */
-        header { background: #f7f7f7; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #ddd; flex-shrink: 0; }
-        .app-title { font-weight: 600; font-size: 16px; }
-        .sync-info { font-size: 12px; color: #999; display: flex; align-items: center; gap: 10px; cursor: pointer;}
-        
-        /* 过滤器 */
-        .tabs { background: #f7f7f7; display: flex; padding: 0 10px; gap: 20px; border-bottom: 1px solid #ddd; overflow-x: auto; height: 44px; align-items: center; flex-shrink: 0; }
-        .tab { font-size: 14px; color: var(--text-sec); white-space: nowrap; cursor: pointer; position: relative; height: 100%; display: flex; align-items: center; }
-        .tab.active { color: var(--primary); font-weight: 600; }
-        .tab.active::after { content:''; position: absolute; bottom:0; left:50%; transform:translateX(-50%); width:20px; height:3px; background:var(--primary); border-radius:2px; }
-        .badge { background: #e0e0e0; font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-left: 4px; color: #666; }
-        .tab.active .badge { background: #d1f2d9; color: var(--primary); }
+        .tab { 
+            font-size: 15px; 
+            color: var(--text-sec); 
+            white-space: nowrap; 
+            cursor: pointer; 
+            padding: 6px 12px; 
+            border-radius: 20px; 
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            display: flex; 
+            align-items: center;
+        }
+        .tab.active { 
+            color: var(--text-main); 
+            background: #fff; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+            font-weight: 600; 
+        }
+        .badge { 
+            background: rgba(0,0,0,0.06); 
+            font-size: 11px; 
+            padding: 2px 6px; 
+            border-radius: 10px; 
+            margin-left: 6px; 
+            color: var(--text-sec); 
+            font-weight: 400;
+        }
+        .tab.active .badge { background: var(--primary); color: #fff; }
 
         /* 主区域 */
-        .main { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 12px; }
+        .main { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 16px 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            padding-bottom: 40px;
+        }
 
-        /* 输入框 */
-        .input-box { background: var(--card); padding: 12px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .inp-title { width: 100%; border: none; font-size: 16px; font-weight: 500; outline: none; margin-bottom: 8px; }
-        .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; outline: none; resize: none; height: 24px; color: #666; margin-bottom: 8px;}
-        .inp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .date-inp { background: #f5f5f5; border: none; border-radius: 4px; padding: 4px; font-size: 12px; color: #555; }
-        .check-lbl { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; }
+        /* 输入框 (Card Style) */
+        .input-box { 
+            background: var(--card); 
+            padding: 20px; 
+            border-radius: var(--radius-l); 
+            box-shadow: var(--shadow-card); 
+            transition: transform 0.2s;
+        }
+        .inp-title { 
+            width: 100%; border: none; font-size: 18px; font-weight: 600; outline: none; margin-bottom: 12px; 
+            font-family: inherit; color: var(--text-main);
+        }
+        .inp-title::placeholder { color: #ccc; font-weight: 400; }
+        .inp-note { 
+            width: 100%; border: none; border-bottom: 1px solid #f0f0f0; 
+            font-size: 14px; outline: none; resize: none; height: 28px; 
+            color: var(--text-sec); margin-bottom: 16px; font-family: inherit;
+        }
+        .inp-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;}
+        
+        .date-inp { 
+            background: #f2f2f7; border: none; border-radius: 8px; 
+            padding: 6px 10px; font-size: 13px; color: var(--primary); font-weight: 500; font-family: inherit;
+        }
+        .check-lbl { font-size: 14px; color: var(--text-main); display: flex; align-items: center; gap: 6px; cursor: pointer;}
+        .check-lbl input { accent-color: var(--primary); width: 16px; height: 16px; }
+
         .tag-row { display: flex; justify-content: space-between; align-items: center; }
-        .cats { display: flex; gap: 8px; }
-        .cat-chip { font-size: 12px; padding: 4px 10px; background: #f0f0f0; color: #666; border-radius: 12px; cursor: pointer; transition: 0.2s; }
-        .cat-chip.selected { background: #e9f9f0; color: var(--primary); font-weight: 500; border: 1px solid var(--primary); }
-        .btn-add { background: var(--primary); color: white; border: none; padding: 6px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; }
+        .cats { display: flex; gap: 10px; }
+        .cat-chip { 
+            font-size: 13px; padding: 6px 14px; background: #f2f2f7; color: var(--text-sec); 
+            border-radius: 20px; cursor: pointer; transition: 0.2s; font-weight: 500;
+        }
+        .cat-chip.selected { 
+            background: var(--text-main); color: #fff; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+        }
+        .btn-add { 
+            background: var(--primary); color: white; border: none; 
+            padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; 
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.3);
+            transition: transform 0.1s;
+        }
+        .btn-add:active { transform: scale(0.96); }
 
         /* 象限布局 */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        @media(max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media(max-width: 650px) { .grid { grid-template-columns: 1fr; } }
         
-        .panel { background: var(--card); border-radius: 8px; padding: 10px; min-height: 150px; display: flex; flex-direction: column; }
-        .p-head { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .panel { 
+            background: var(--card); border-radius: var(--radius-l); 
+            padding: 16px; min-height: 160px; display: flex; flex-direction: column;
+            box-shadow: var(--shadow-card); border: none;
+            position: relative; overflow: hidden;
+        }
+        /* Color indicators for panels */
+        .panel::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+        }
+        
+        .p-head { 
+            font-size: 15px; font-weight: 700; margin-bottom: 12px; 
+            display: flex; align-items: center; justify-content: space-between;
+            letter-spacing: -0.3px;
+        }
         
         /* 列表项 */
         ul { list-style: none; padding: 0; margin: 0; }
-        .task { padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; }
+        .task { 
+            padding: 12px 0; border-bottom: 1px solid #f5f5f7; display: flex; gap: 12px; 
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .task:last-child { border-bottom: none; }
 
         .t-body { flex: 1; }
-        .t-txt { font-size: 15px; color: #222; line-height: 1.4; }
-        .t-sub { font-size: 12px; color: #999; margin-top: 2px; }
-        .t-tags { margin-top: 4px; display: flex; gap: 6px; align-items: center; }
-        .tg { font-size: 10px; padding: 1px 5px; border-radius: 3px; background: #eee; color: #777; }
+        .t-txt { font-size: 15px; color: var(--text-main); line-height: 1.4; font-weight: 500; }
+        .t-sub { font-size: 13px; color: var(--text-sec); margin-top: 4px; }
+        .t-tags { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        
+        .tg { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f2f2f7; color: var(--text-sec); font-weight: 500; }
         .tg.due { color: #fff; background: var(--danger); }
         .tg.due-warn { color: #fff; background: var(--warn); }
-        
-        .t-act { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-        .icon-btn { border: none; background: transparent; color: #ccc; font-size: 16px; cursor: pointer; padding: 5px; }
-        .icon-btn.ok:hover { color: var(--primary); }
+        .tg.date-info { background: transparent; color: #999; padding-left: 0; font-size: 11px; }
+
+        .t-act { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; justify-content: flex-start; }
+        .icon-btn { 
+            border: none; background: transparent; color: #d1d1d6; 
+            font-size: 18px; cursor: pointer; padding: 6px; transition: color 0.2s;
+        }
+        .icon-btn.ok:hover { color: var(--success); }
         .icon-btn.del:hover { color: var(--danger); }
 
-        /* 归档模式 */
-        .archive-view .task { opacity: 0.6; }
-        .archive-view .t-txt { text-decoration: line-through; }
-        
-        /* 设置弹窗 */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; display: none; align-items: center; justify-content: center; }
-        .modal-box { background: #fff; width: 90%; max-width: 320px; border-radius: 10px; padding: 20px; }
-        .modal-tit { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-        .f-grp { margin-bottom: 10px; }
-        .f-grp label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
-        .f-grp input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
-        .btn-block { width: 100%; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: 5px; font-size: 15px; margin-top: 10px; }
-        .btn-cancel { background: transparent; color: #888; margin-top: 5px; }
+        /* 归档模式美化 */
+        .archive-view .task { opacity: 1; } 
+        .archive-view .t-txt { text-decoration: none; color: #666; } /* 不用删除线，改用变灰 */
+        .date-meta {
+            display: flex; flex-direction: column; gap: 2px; margin-top: 6px;
+        }
+        .meta-row { font-size: 11px; color: #aaa; display: flex; align-items: center; gap: 5px; }
+        .meta-row i { font-size: 10px; width: 14px; text-align: center; }
 
-        .empty-hint { text-align: center; color: #ccc; font-size: 12px; padding: 20px 0; }
+        /* 弹窗 (iOS Alert Style) */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+        .modal.show { opacity: 1; }
+        .modal-box { 
+            background: rgba(255,255,255,0.95); 
+            backdrop-filter: saturate(180%) blur(20px);
+            width: 85%; max-width: 320px; border-radius: 20px; padding: 24px; 
+            box-shadow: var(--shadow-float); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        .modal.show .modal-box { transform: scale(1); }
+
+        .modal-tit { font-size: 18px; font-weight: 600; margin-bottom: 20px; text-align: center; }
+        .f-grp { margin-bottom: 16px; }
+        .f-grp label { display: block; font-size: 13px; color: var(--text-sec); margin-bottom: 6px; font-weight: 500; }
+        .f-grp input { 
+            width: 100%; padding: 10px; box-sizing: border-box; 
+            border: 1px solid #e5e5e5; border-radius: 10px; font-size: 14px; background: #fff;
+            transition: border-color 0.2s;
+        }
+        .f-grp input:focus { border-color: var(--primary); outline: none; }
+        
+        .btn-block { width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; margin-top: 8px; cursor: pointer; }
+        .btn-cancel { background: transparent; color: var(--text-sec); margin-top: 8px; }
+
+        .empty-hint { text-align: center; color: #d1d1d6; font-size: 13px; padding: 30px 0; font-weight: 500; }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="app-title">我的生活投资</div>
+    <div class="app-title">Life Manager Pro</div>
     <div class="sync-info">
         <span id="statusTxt" onclick="alert(this.innerText)">准备就绪</span>
-        <i class="fas fa-cog" onclick="showSettings()" style="padding: 10px;"></i>
+        <i class="fas fa-sliders-h" onclick="showSettings()" style="padding: 8px; background: rgba(0,0,0,0.05); border-radius: 50%;"></i>
     </div>
 </header>
 
-<div class="tabs">
-    <div class="tab active" onclick="setFilter('all')" id="tab-all">全部 <span class="badge" id="c-all">0</span></div>
-    <div class="tab" onclick="setFilter('work')" id="tab-work">投资 <span class="badge" id="c-work">0</span></div>
-    <div class="tab" onclick="setFilter('life')" id="tab-life">生活 <span class="badge" id="c-life">0</span></div>
-    <div class="tab" onclick="setFilter('health')" id="tab-health">健康 <span class="badge" id="c-health">0</span></div>
-    <div class="tab" onclick="setFilter('archive')" id="tab-archive">归档 <span class="badge" id="c-archive">0</span></div>
+<div class="tabs-wrapper">
+    <div class="tabs">
+        <div class="tab active" onclick="setFilter('all')" id="tab-all">全部 <span class="badge" id="c-all">0</span></div>
+        <div class="tab" onclick="setFilter('work')" id="tab-work">投资 <span class="badge" id="c-work">0</span></div>
+        <div class="tab" onclick="setFilter('life')" id="tab-life">生活 <span class="badge" id="c-life">0</span></div>
+        <div class="tab" onclick="setFilter('health')" id="tab-health">健康 <span class="badge" id="c-health">0</span></div>
+        <div class="tab" onclick="setFilter('archive')" id="tab-archive">归档 <span class="badge" id="c-archive">0</span></div>
+    </div>
 </div>
 
 <div class="main">
     <div class="input-box" id="inputArea">
-        <input type="text" id="newTitle" class="inp-title" placeholder="输入要做的事...">
+        <input type="text" id="newTitle" class="inp-title" placeholder="添加新事项...">
         <textarea id="newNote" class="inp-note" placeholder="备注 (可选)"></textarea>
         <div class="inp-row">
             <input type="date" id="newDate" class="date-inp">
-            <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急</label>
-            <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要</label>
+            <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急 🔥</label>
+            <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要 ⭐</label>
         </div>
         <div class="tag-row">
             <div class="cats">
@@ -116,58 +279,60 @@
                 <div class="cat-chip" onclick="setInpCat('life')" id="chip-life">🏠 生活</div>
                 <div class="cat-chip" onclick="setInpCat('health')" id="chip-health">❤️ 健康</div>
             </div>
-            <button class="btn-add" onclick="addTask()">发布</button>
+            <button class="btn-add" onclick="addTask()"><i class="fas fa-arrow-up"></i></button>
         </div>
     </div>
 
     <div class="grid" id="matrixView">
-        <div class="panel" style="border-left: 3px solid var(--q1)">
-            <div class="p-head" style="color:var(--q1)">马上做</div>
+        <div class="panel" style="border-left:none;">
+            <style>.panel:nth-child(1)::before{background:var(--q1);}</style>
+            <div class="p-head" style="color:var(--q1)">马上做 <i class="fas fa-fire-alt"></i></div>
             <ul id="list-q1"></ul>
         </div>
-        <div class="panel" style="border-left: 3px solid var(--q2)">
-            <div class="p-head" style="color:var(--q2)">计划做</div>
+        <div class="panel" style="border-left:none;">
+            <style>.panel:nth-child(2)::before{background:var(--q2);}</style>
+            <div class="p-head" style="color:var(--q2)">计划做 <i class="fas fa-calendar-alt"></i></div>
             <ul id="list-q2"></ul>
         </div>
-        <div class="panel" style="border-left: 3px solid var(--q3)">
-            <div class="p-head" style="color:var(--q3)">抽空做</div>
+        <div class="panel" style="border-left:none;">
+            <style>.panel:nth-child(3)::before{background:var(--q3);}</style>
+            <div class="p-head" style="color:var(--q3)">抽空做 <i class="fas fa-coffee"></i></div>
             <ul id="list-q3"></ul>
         </div>
-        <div class="panel" style="border-left: 3px solid var(--q4)">
-            <div class="p-head" style="color:var(--q4)">备忘录</div>
+        <div class="panel" style="border-left:none;">
+            <style>.panel:nth-child(4)::before{background:var(--q4);}</style>
+            <div class="p-head" style="color:var(--q4)">备忘录 <i class="fas fa-sticky-note"></i></div>
             <ul id="list-q4"></ul>
         </div>
     </div>
 
-    <div class="panel archive-view" id="archiveView" style="display:none; min-height: 400px;">
-        <div class="p-head">
+    <div class="panel archive-view" id="archiveView" style="display:none; min-height: 400px; border-left:none;">
+        <div class="p-head" style="color: var(--text-main);">
             <span>历史记录</span>
-            <span onclick="clearArchive()" style="margin-left:auto; color:#666; font-weight:normal; cursor:pointer; padding:5px;">清空</span>
+            <span onclick="clearArchive()" style="color:var(--danger); font-size:13px; font-weight:500; cursor:pointer; background: rgba(255, 59, 48, 0.1); padding: 4px 10px; border-radius: 12px;">清空历史</span>
         </div>
         <ul id="list-arch"></ul>
     </div>
 </div>
 
+<!-- Modal -->
 <div class="modal" id="settingModal">
     <div class="modal-box">
-        <div class="modal-tit">GitHub 同步配置</div>
+        <div class="modal-tit">iCloud / GitHub Sync</div>
         <div class="f-grp">
-            <label>Token (Classic, 必须有 repo 权限)</label>
+            <label>Token (GitHub PAT)</label>
             <input type="password" id="cfgToken" placeholder="ghp_...">
         </div>
         <div class="f-grp">
-            <label>用户名 (User)</label>
-            <input type="text" id="cfgUser" placeholder="例如: dlezywj-cell">
+            <label>GitHub Username</label>
+            <input type="text" id="cfgUser" placeholder="e.g. dlezywj-cell">
         </div>
         <div class="f-grp">
-            <label>仓库名 (Repo Name)</label>
-            <input type="text" id="cfgRepo" placeholder="例如: lifedata">
+            <label>Repository Name</label>
+            <input type="text" id="cfgRepo" placeholder="e.g. lifedata">
         </div>
-        <button class="btn-block" onclick="saveConfig()">保存并同步</button>
-        <button class="btn-block btn-cancel" onclick="closeSettings()">关闭</button>
-        <div style="font-size:10px; color:#999; margin-top:10px; text-align:center;">
-            修改后会自动连接
-        </div>
+        <button class="btn-block" onclick="saveConfig()">保存配置</button>
+        <button class="btn-block btn-cancel" onclick="closeSettings()">取消</button>
     </div>
 </div>
 
@@ -185,9 +350,21 @@
         inputCat: 'work',
         fileSha: null,
         syncTimer: null,
-        isSyncing: false, // 🔒 同步锁：防止重复提交
-        needSyncAgain: false // 🔄 排队标记
+        isSyncing: false,
+        needSyncAgain: false
     };
+
+    // --- 工具：日期格式化 ---
+    function formatDate(isoStr) {
+        if (!isoStr) return '';
+        const d = new Date(isoStr);
+        const y = d.getFullYear();
+        const m = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        const h = d.getHours().toString().padStart(2, '0');
+        const min = d.getMinutes().toString().padStart(2, '0');
+        return `${y}/${m}/${day} ${h}:${min}`;
+    }
 
     // --- 初始化 ---
     function init() {
@@ -215,7 +392,7 @@
             fetchFromCloud(); 
         } else {
             setStatus('本地模式');
-            if(store.tasks.length === 0) showSettings();
+            if(store.tasks.length === 0) setTimeout(showSettings, 500);
         }
     }
 
@@ -234,7 +411,8 @@
                 urgent: document.getElementById('isUrgent').checked,
                 important: document.getElementById('isImp').checked,
                 completed: false,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                completedAt: null // 初始化完成时间
             };
 
             store.tasks.push(task);
@@ -249,6 +427,12 @@
         const t = store.tasks.find(x => x.id == id);
         if(t) {
             t.completed = !t.completed;
+            // 逻辑修改：记录完成时间
+            if (t.completed) {
+                t.completedAt = new Date().toISOString();
+            } else {
+                t.completedAt = null;
+            }
             saveLocal();
         }
     };
@@ -306,25 +490,43 @@
             if(t.deadline && !t.completed) {
                 const dDate = new Date(t.deadline.replace(/-/g, '/'));
                 const diff = Math.ceil((dDate - now) / 86400000);
-                if (diff < 0) dateTag = `<span class="tg due">逾期${Math.abs(diff)}天</span>`;
-                else if (diff === 0) dateTag = `<span class="tg due">今天截止</span>`;
-                else if (diff <= 3) dateTag = `<span class="tg due-warn">${diff}天后</span>`;
-                else dateTag = `<span class="tg">${diff}天后</span>`;
+                if (diff < 0) dateTag = `<span class="tg due">已逾期 ${Math.abs(diff)} 天</span>`;
+                else if (diff === 0) dateTag = `<span class="tg due-warn">今天截止</span>`;
+                else if (diff <= 3) dateTag = `<span class="tg due-warn">${diff} 天后</span>`;
+                else dateTag = `<span class="tg">${diff} 天后</span>`;
             }
             const catName = { work:'投资', life:'生活', health:'健康' }[t.category] || '其他';
             
+            // 渲染按钮
             const btns = store.filter === 'archive' 
-                ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-undo"></i></button>
-                   <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`
-                : `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-check-circle"></i></button>
-                   <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`;
+                ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})" title="撤销"><i class="fas fa-undo"></i></button>
+                   <button class="icon-btn del" onclick="removeTask(${t.id})" title="彻底删除"><i class="fas fa-trash-alt"></i></button>`
+                : `<button class="icon-btn ok" onclick="toggleStatus(${t.id})" title="完成"><i class="fas fa-check-circle"></i></button>
+                   <button class="icon-btn del" onclick="removeTask(${t.id})" title="删除"><i class="fas fa-trash"></i></button>`;
+
+            // 归档模式下，额外显示日期信息
+            let archiveMeta = '';
+            if (store.filter === 'archive') {
+                const createdStr = formatDate(t.createdAt);
+                const completedStr = formatDate(t.completedAt || new Date().toISOString()); // 兼容旧数据无时间
+                archiveMeta = `
+                    <div class="date-meta">
+                        <div class="meta-row"><i class="fas fa-plus-circle"></i> 创建于: ${createdStr}</div>
+                        <div class="meta-row" style="color:#34c759"><i class="fas fa-check-circle"></i> 归档于: ${completedStr}</div>
+                    </div>
+                `;
+            }
 
             const html = `
                 <li class="task">
                     <div class="t-body">
                         <div class="t-txt">${esc(t.title)}</div>
                         ${t.notes ? `<div class="t-sub">${esc(t.notes)}</div>` : ''}
-                        <div class="t-tags"><span class="tg">${catName}</span>${dateTag}</div>
+                        <div class="t-tags">
+                            <span class="tg">${catName}</span>
+                            ${dateTag}
+                        </div>
+                        ${archiveMeta}
                     </div>
                     <div class="t-act">${btns}</div>
                 </li>`;
@@ -338,7 +540,7 @@
 
         const setH = (id, arr) => {
             const el = document.getElementById(id);
-            if(el) el.innerHTML = arr.length ? arr.join('') : '<div class="empty-hint">无内容</div>';
+            if(el) el.innerHTML = arr.length ? arr.join('') : '<div class="empty-hint">暂无项目</div>';
         };
         setH('list-q1', buckets.q1);
         setH('list-q2', buckets.q2);
@@ -363,7 +565,6 @@
     function saveLocal() {
         localStorage.setItem('lm_data', JSON.stringify(store.tasks));
         render();
-        // 智能防抖
         store.needSyncAgain = true;
         if(store.syncTimer) clearTimeout(store.syncTimer);
         store.syncTimer = setTimeout(triggerSync, 1000); 
@@ -376,12 +577,12 @@
 
     function esc(s) { return s ? s.replace(/</g, "&lt;") : ''; }
 
-    // --- 核心同步逻辑 ---
+    // --- 核心同步逻辑 (保持原样) ---
     async function fetchFromCloud() {
         if(!store.config.token) return;
         
         try {
-            setStatus('检查更新...');
+            setStatus('检查云端...');
             store.isSyncing = true;
             
             const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`;
@@ -406,7 +607,7 @@
             setStatus('已同步');
         } catch(e) {
             console.error(e);
-            setStatus('同步待机'); 
+            setStatus('同步暂停'); 
         } finally {
             store.isSyncing = false;
         }
@@ -422,7 +623,7 @@
 
         try {
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(store.tasks, null, 2))));
-            const body = { message: 'update', content: content };
+            const body = { message: 'update from web', content: content };
             if(store.fileSha) body.sha = store.fileSha;
 
             const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`;
@@ -444,12 +645,12 @@
                 return; 
             } else {
                 console.warn("Upload failed:", res.status);
-                setStatus('上传未完'); 
+                setStatus('上传失败'); 
             }
 
         } catch(e) {
             console.error("Sync Error:", e);
-            setStatus('离线模式'); 
+            setStatus('离线'); 
         } finally {
             store.isSyncing = false;
             if(store.needSyncAgain) {
@@ -458,14 +659,22 @@
         }
     }
 
-    // 设置逻辑
+    // 设置弹窗逻辑
     window.showSettings = () => {
         document.getElementById('cfgToken').value = store.config.token;
         document.getElementById('cfgUser').value = store.config.user;
         document.getElementById('cfgRepo').value = store.config.repo;
-        document.getElementById('settingModal').style.display = 'flex';
+        const modal = document.getElementById('settingModal');
+        modal.style.display = 'flex';
+        // 强制重绘以触发动画
+        modal.offsetHeight; 
+        modal.classList.add('show');
     };
-    window.closeSettings = () => document.getElementById('settingModal').style.display = 'none';
+    window.closeSettings = () => {
+        const modal = document.getElementById('settingModal');
+        modal.classList.remove('show');
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    };
     window.saveConfig = () => {
         store.config.token = document.getElementById('cfgToken').value.trim();
         store.config.user = document.getElementById('cfgUser').value.trim();
