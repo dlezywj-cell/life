@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Life Manager (修复终极版)</title>
+    <title>Life Manager (最终稳定版)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --bg: #ededed; --card: #ffffff; --primary: #07c160; --danger: #fa5151; --warn: #ff9f00; --text: #333; --text-sec: #888;
             --q1: #fa5151; --q2: #576b95; --q3: #e6a23c; --q4: #7f7f7f;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; -webkit-tap-highlight-color: transparent; }
         
         /* 顶部导航 */
         header { background: #f7f7f7; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #ddd; flex-shrink: 0; }
@@ -89,7 +89,7 @@
     <div class="app-title">我的生活投资</div>
     <div class="sync-info">
         <span id="statusTxt" onclick="alert(this.innerText)">准备就绪</span>
-        <i class="fas fa-cog" onclick="showSettings()" style="padding: 5px;"></i>
+        <i class="fas fa-cog" onclick="showSettings()" style="padding: 10px;"></i>
     </div>
 </header>
 
@@ -152,21 +152,21 @@
     <div class="modal-box">
         <div class="modal-tit">GitHub 同步配置</div>
         <div class="f-grp">
-            <label>Token (Classic)</label>
+            <label>Token (Classic, 必须有 repo 权限)</label>
             <input type="password" id="cfgToken" placeholder="ghp_...">
         </div>
         <div class="f-grp">
             <label>用户名 (User)</label>
-            <input type="text" id="cfgUser" placeholder="例如: yourname">
+            <input type="text" id="cfgUser" placeholder="例如: dlezywj-cell">
         </div>
         <div class="f-grp">
-            <label>仓库名 (Repo)</label>
-            <input type="text" id="cfgRepo" placeholder="例如: life-manager">
+            <label>仓库名 (Repo Name)</label>
+            <input type="text" id="cfgRepo" placeholder="例如: lifedata">
         </div>
         <button class="btn-block" onclick="saveConfig()">保存并同步</button>
         <button class="btn-block btn-cancel" onclick="closeSettings()">关闭</button>
         <div style="font-size:10px; color:#999; margin-top:10px; text-align:center;">
-            修改后会自动尝试连接
+            修改后会自动连接
         </div>
     </div>
 </div>
@@ -184,7 +184,9 @@
         filter: 'all', 
         inputCat: 'work',
         fileSha: null,
-        syncTimer: null
+        syncTimer: null,
+        isSyncing: false, // 🔒 同步锁：防止重复提交
+        needSyncAgain: false // 🔄 排队标记
     };
 
     // --- 初始化 ---
@@ -209,7 +211,7 @@
         render();
 
         if(store.config.token) {
-            setStatus('准备连接...');
+            setStatus('准备就绪');
             fetchFromCloud(); 
         } else {
             setStatus('本地模式');
@@ -244,7 +246,6 @@
     };
 
     window.toggleStatus = function(id) {
-        // 关键修复：使用宽松相等 (==) 兼容数字和字符串ID
         const t = store.tasks.find(x => x.id == id);
         if(t) {
             t.completed = !t.completed;
@@ -253,23 +254,15 @@
     };
 
     window.removeTask = function(id) {
-        // 关键修复：防止 confirm 被屏蔽导致代码报错停止
-        try {
-            if(!confirm('确定删除这条记录吗？')) return;
-        } catch(e) { console.log("Confirm dialog blocked/error"); }
-
-        store.tasks = store.tasks.filter(x => x.id != id); // 使用 !=
+        try { if(!confirm('确定删除这条记录吗？')) return; } catch(e) {}
+        store.tasks = store.tasks.filter(x => x.id != id);
         saveLocal();
     };
 
     window.clearArchive = function() {
         const count = store.tasks.filter(t=>t.completed).length;
         if(count === 0) return alert('没有可清空的内容');
-        
-        try {
-            if(!confirm(`确定清空 ${count} 条归档记录？(不可恢复)`)) return;
-        } catch(e) {}
-
+        try { if(!confirm(`确定清空 ${count} 条归档记录？`)) return; } catch(e) {}
         store.tasks = store.tasks.filter(t => !t.completed);
         saveLocal();
     };
@@ -370,80 +363,98 @@
     function saveLocal() {
         localStorage.setItem('lm_data', JSON.stringify(store.tasks));
         render();
-        // 防抖：1秒后同步
+        // 智能防抖
+        store.needSyncAgain = true;
         if(store.syncTimer) clearTimeout(store.syncTimer);
-        store.syncTimer = setTimeout(syncToCloud, 1000);
+        store.syncTimer = setTimeout(triggerSync, 1000); 
+    }
+
+    function triggerSync() {
+        if(store.isSyncing) return; 
+        syncToCloud();
     }
 
     function esc(s) { return s ? s.replace(/</g, "&lt;") : ''; }
 
-    // --- 同步逻辑 (中文编码修复 + 错误处理) ---
+    // --- 核心同步逻辑 ---
     async function fetchFromCloud() {
         if(!store.config.token) return;
         
         try {
-            setStatus('同步中...');
+            setStatus('检查更新...');
+            store.isSyncing = true;
+            
             const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`;
             const res = await fetch(url, { headers: { Authorization: `token ${store.config.token}`, 'Cache-Control': 'no-cache' }});
             
             if(res.status === 404) {
-                // 404 说明文件不存在，自动创建（通过上传）
-                console.log("云端无文件，尝试创建...");
+                console.log("云端无文件，准备初次上传...");
+                store.isSyncing = false; 
                 return syncToCloud(); 
             }
-            if(res.status === 401) throw new Error("Token 错误 (401)");
-            if(!res.ok) throw new Error(`网络错误 ${res.status}`);
+            if(!res.ok) throw new Error(`Err ${res.status}`);
 
             const data = await res.json();
-            store.fileSha = data.sha;
+            store.fileSha = data.sha; 
             
-            // 关键：解决中文乱码 (base64 -> utf8)
             const contentStr = decodeURIComponent(escape(atob(data.content)));
             const cloudTasks = JSON.parse(contentStr);
 
-            store.tasks = cloudTasks; // 覆盖本地
+            store.tasks = cloudTasks; 
             localStorage.setItem('lm_data', JSON.stringify(store.tasks));
             render();
-            setStatus('同步完成');
+            setStatus('已同步');
         } catch(e) {
             console.error(e);
-            setStatus('同步失败: ' + e.message);
+            setStatus('同步待机'); 
+        } finally {
+            store.isSyncing = false;
         }
     }
 
     async function syncToCloud() {
         if(!store.config.token) return;
+        if(store.isSyncing) return;
+
+        store.isSyncing = true;
+        store.needSyncAgain = false;
         setStatus('上传中...');
+
         try {
-            // 关键：解决中文乱码 (utf8 -> base64)
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(store.tasks, null, 2))));
-            
-            const body = { message: 'update via life-manager', content: content };
+            const body = { message: 'update', content: content };
             if(store.fileSha) body.sha = store.fileSha;
 
             const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`;
+            
             const res = await fetch(url, {
                 method: 'PUT',
                 headers: { Authorization: `token ${store.config.token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
 
-            if(res.status === 409) {
-                // 冲突，重新拉取最新sha再试
-                await fetchFromCloud();
-                return; 
-            }
-
             if(res.ok) {
                 const data = await res.json();
                 store.fileSha = data.content.sha;
                 setStatus('云端已存');
+            } else if(res.status === 409) {
+                console.warn("冲突重试...");
+                store.isSyncing = false; 
+                await fetchFromCloud(); 
+                return; 
             } else {
-                throw new Error(`Err ${res.status}`);
+                console.warn("Upload failed:", res.status);
+                setStatus('上传未完'); 
             }
+
         } catch(e) {
-            console.error(e);
-            setStatus('上传失败');
+            console.error("Sync Error:", e);
+            setStatus('离线模式'); 
+        } finally {
+            store.isSyncing = false;
+            if(store.needSyncAgain) {
+                setTimeout(triggerSync, 500);
+            }
         }
     }
 
@@ -465,11 +476,10 @@
         localStorage.setItem('gh_repo', store.config.repo);
         
         closeSettings();
-        fetchFromCloud(); // 保存后立即尝试同步
+        fetchFromCloud(); 
     };
     function setStatus(txt) { document.getElementById('statusTxt').innerText = txt; }
 
-    // 启动
     init();
 </script>
 </body>
