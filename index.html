@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Life Manager Pro (重构版)</title>
+    <title>Life Manager (修复版)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -15,7 +15,7 @@
         /* 顶部导航 */
         header { background: #f7f7f7; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #ddd; flex-shrink: 0; }
         .app-title { font-weight: 600; font-size: 16px; }
-        .sync-info { font-size: 12px; color: #999; display: flex; align-items: center; gap: 10px; }
+        .sync-info { font-size: 12px; color: #999; display: flex; align-items: center; gap: 10px; cursor: pointer;}
         
         /* 过滤器 */
         .tabs { background: #f7f7f7; display: flex; padding: 0 10px; gap: 20px; border-bottom: 1px solid #ddd; overflow-x: auto; height: 44px; align-items: center; flex-shrink: 0; }
@@ -47,13 +47,11 @@
         
         .panel { background: var(--card); border-radius: 8px; padding: 10px; min-height: 150px; display: flex; flex-direction: column; }
         .p-head { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; }
         
         /* 列表项 */
         ul { list-style: none; padding: 0; margin: 0; }
-        .task { padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; animation: fadeIn 0.3s; }
+        .task { padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; }
         .task:last-child { border-bottom: none; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 
         .t-body { flex: 1; }
         .t-txt { font-size: 15px; color: #222; line-height: 1.4; }
@@ -64,7 +62,7 @@
         .tg.due-warn { color: #fff; background: var(--warn); }
         
         .t-act { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-        .icon-btn { border: none; background: transparent; color: #ccc; font-size: 16px; cursor: pointer; }
+        .icon-btn { border: none; background: transparent; color: #ccc; font-size: 16px; cursor: pointer; padding: 5px; }
         .icon-btn.ok:hover { color: var(--primary); }
         .icon-btn.del:hover { color: var(--danger); }
 
@@ -90,7 +88,7 @@
 <header>
     <div class="app-title">我的生活投资</div>
     <div class="sync-info">
-        <span id="statusTxt">就绪</span>
+        <span id="statusTxt" onclick="alert(this.innerText)">检查中...</span>
         <i class="fas fa-cog" onclick="showSettings()"></i>
     </div>
 </header>
@@ -104,7 +102,6 @@
 </div>
 
 <div class="main">
-    <!-- 输入区域 (归档模式隐藏) -->
     <div class="input-box" id="inputArea">
         <input type="text" id="newTitle" class="inp-title" placeholder="输入要做的事...">
         <textarea id="newNote" class="inp-note" placeholder="备注 (可选)"></textarea>
@@ -123,7 +120,6 @@
         </div>
     </div>
 
-    <!-- 象限视图 -->
     <div class="grid" id="matrixView">
         <div class="panel" style="border-left: 3px solid var(--q1)">
             <div class="p-head" style="color:var(--q1)">马上做</div>
@@ -143,17 +139,15 @@
         </div>
     </div>
 
-    <!-- 归档视图 -->
     <div class="panel archive-view" id="archiveView" style="display:none; min-height: 400px;">
         <div class="p-head">
             <span>历史记录</span>
-            <span onclick="clearArchive()" style="margin-left:auto; color:#666; font-weight:normal; cursor:pointer;">清空</span>
+            <span onclick="clearArchive()" style="margin-left:auto; color:#666; font-weight:normal; cursor:pointer; padding:5px;">清空</span>
         </div>
         <ul id="list-arch"></ul>
     </div>
 </div>
 
-<!-- 设置弹窗 -->
 <div class="modal" id="settingModal">
     <div class="modal-box">
         <div class="modal-tit">GitHub 同步配置</div>
@@ -175,264 +169,246 @@
             repo: localStorage.getItem('gh_repo') || '',
             file: 'data.json'
         },
-        filter: 'all', // all, work, life, health, archive
+        filter: 'all', 
         inputCat: 'work',
-        lastActionTime: 0, // 关键：用于防止数据竞态
+        lastActionTime: 0,
         fileSha: null
     };
 
-    // --- 初始化 ---
-    init();
-
-    function init() {
-        // 读取本地缓存
-        try {
-            const local = JSON.parse(localStorage.getItem('lm_data') || '[]');
-            store.tasks = deduplicate(local); // 启动时去重
-        } catch(e) { store.tasks = []; }
-
-        render();
-
-        // 如果配置了 Token，尝试同步
-        if(store.config.token) {
-            setTimeout(fetchFromCloud, 1000);
-        } else if (store.tasks.length === 0) {
-            showSettings();
+    // --- 立即执行初始化 ---
+    try {
+        const local = localStorage.getItem('lm_data');
+        if(local) {
+            store.tasks = JSON.parse(local);
+            // 简单去重
+            const seen = new Set();
+            store.tasks = store.tasks.filter(t => {
+                if(seen.has(t.id)) return false;
+                seen.add(t.id);
+                return true;
+            });
         }
+    } catch(e) { 
+        console.error("Local data corrupted", e); 
+        store.tasks = []; 
+    }
+    
+    // 渲染界面 (无论同步是否成功)
+    render();
+
+    // 尝试同步
+    if(store.config.token) {
+        setStatus('连接中...');
+        setTimeout(fetchFromCloud, 500);
+    } else {
+        setStatus('本地模式');
+        if(store.tasks.length === 0) showSettings();
     }
 
-    // --- 核心修复：渲染引擎 ---
+    // --- 全局函数绑定 (解决点击无反应的核心) ---
+    // 必须挂载到 window 对象，确保 HTML 中的 onclick 能找到它们
+    window.addTask = function() {
+        try {
+            const title = document.getElementById('newTitle').value.trim();
+            if(!title) return alert('请填写内容');
+
+            const task = {
+                id: Date.now(),
+                title: title,
+                notes: document.getElementById('newNote').value.trim(),
+                category: store.inputCat,
+                deadline: document.getElementById('newDate').value,
+                urgent: document.getElementById('isUrgent').checked,
+                important: document.getElementById('isImp').checked,
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+
+            store.tasks.push(task);
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newNote').value = '';
+            
+            saveLocal();
+        } catch(e) { alert("添加失败: " + e.message); }
+    };
+
+    window.toggleStatus = function(id) {
+        const t = store.tasks.find(x => x.id === id);
+        if(t) {
+            t.completed = !t.completed;
+            saveLocal();
+        }
+    };
+
+    window.removeTask = function(id) {
+        if(!confirm('确定删除吗？')) return;
+        store.tasks = store.tasks.filter(x => x.id !== id);
+        saveLocal();
+    };
+
+    window.clearArchive = function() {
+        if(store.tasks.filter(t=>t.completed).length === 0) return alert('没有可清空的内容');
+        if(!confirm('清空所有归档记录？(不可恢复)')) return;
+        store.tasks = store.tasks.filter(t => !t.completed);
+        saveLocal();
+    };
+
+    window.setFilter = function(f) {
+        store.filter = f;
+        render();
+    };
+
+    window.setInpCat = function(cat) {
+        store.inputCat = cat;
+        document.querySelectorAll('.cat-chip').forEach(el => el.classList.remove('selected'));
+        document.getElementById('chip-' + cat).classList.add('selected');
+    };
+
+    // --- 渲染引擎 ---
     function render() {
-        // 1. 准备数据桶
+        // 清空容器
         const buckets = { q1: [], q2: [], q3: [], q4: [], arch: [] };
         const counts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
         const now = new Date().setHours(0,0,0,0);
 
-        // 2. 遍历所有任务 (只遍历一次，计算所有状态)
         store.tasks.forEach(t => {
-            // A. 统计数量 (无论是否显示，都要统计)
-            if(t.completed) {
-                counts.archive++;
-            } else {
+            // 统计
+            if(t.completed) counts.archive++;
+            else {
                 counts.all++;
                 if(counts.hasOwnProperty(t.category)) counts[t.category]++;
             }
 
-            // B. 过滤逻辑 (核心修复点：严格控制什么任务进入渲染列表)
-            let isVisible = false;
-
-            if (store.filter === 'archive') {
-                if (t.completed) isVisible = true;
+            // 过滤可见性
+            let visible = false;
+            if(store.filter === 'archive') {
+                if(t.completed) visible = true;
             } else {
-                // 仅显示未完成
-                if (!t.completed) {
-                    if (store.filter === 'all') isVisible = true;
-                    else if (t.category === store.filter) isVisible = true;
+                if(!t.completed) {
+                    if(store.filter === 'all') visible = true;
+                    else if(t.category === store.filter) visible = true;
                 }
             }
+            if(!visible) return;
 
-            if (!isVisible) return; // 跳过不渲染
-
-            // C. 生成 HTML 字符串
-            const html = createTaskHTML(t, now);
-
-            // D. 分配到对应象限
-            if (store.filter === 'archive') {
-                buckets.arch.push(html);
-            } else {
-                if (t.urgent && t.important) buckets.q1.push(html);
-                else if (!t.urgent && t.important) buckets.q2.push(html);
-                else if (t.urgent && !t.important) buckets.q3.push(html);
-                else buckets.q4.push(html);
+            // 生成 HTML
+            let dateTag = '';
+            if(t.deadline && !t.completed) {
+                const diff = Math.ceil((new Date(t.deadline) - now) / 86400000);
+                if (diff < 0) dateTag = `<span class="tg due">逾期${Math.abs(diff)}天</span>`;
+                else if (diff === 0) dateTag = `<span class="tg due">今天截止</span>`;
+                else if (diff <= 3) dateTag = `<span class="tg due-warn">${diff}天后</span>`;
+                else dateTag = `<span class="tg">${diff}天后</span>`;
             }
+            const catName = { work:'投资', life:'生活', health:'健康' }[t.category] || '其他';
+            
+            const btns = store.filter === 'archive' 
+                ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-undo"></i></button>
+                   <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`
+                : `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-check-circle"></i></button>
+                   <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`;
+
+            const html = `
+                <li class="task">
+                    <div class="t-body">
+                        <div class="t-txt">${esc(t.title)}</div>
+                        ${t.notes ? `<div class="t-sub">${esc(t.notes)}</div>` : ''}
+                        <div class="t-tags"><span class="tg">${catName}</span>${dateTag}</div>
+                    </div>
+                    <div class="t-act">${btns}</div>
+                </li>`;
+
+            if(store.filter === 'archive') buckets.arch.push(html);
+            else if(t.urgent && t.important) buckets.q1.push(html);
+            else if(!t.urgent && t.important) buckets.q2.push(html);
+            else if(t.urgent && !t.important) buckets.q3.push(html);
+            else buckets.q4.push(html);
         });
 
-        // 3. 写入 DOM (一次性覆盖，防止残留)
-        setHtml('list-q1', buckets.q1);
-        setHtml('list-q2', buckets.q2);
-        setHtml('list-q3', buckets.q3);
-        setHtml('list-q4', buckets.q4);
-        setHtml('list-arch', buckets.arch);
+        const setH = (id, arr) => {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = arr.length ? arr.join('') : '<div class="empty-hint">无内容</div>';
+        };
 
-        // 4. 更新界面状态
+        setH('list-q1', buckets.q1);
+        setH('list-q2', buckets.q2);
+        setH('list-q3', buckets.q3);
+        setH('list-q4', buckets.q4);
+        setH('list-arch', buckets.arch);
+
+        // 更新Tab状态
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         document.getElementById('tab-' + store.filter).classList.add('active');
-
+        
+        // 更新数字
         Object.keys(counts).forEach(k => {
             const el = document.getElementById('c-' + k);
             if(el) el.innerText = counts[k];
         });
 
-        // 切换视图显示
+        // 切换视图
         const isArch = store.filter === 'archive';
         document.getElementById('matrixView').style.display = isArch ? 'none' : 'grid';
         document.getElementById('inputArea').style.display = isArch ? 'none' : 'block';
         document.getElementById('archiveView').style.display = isArch ? 'block' : 'none';
     }
 
-    // --- HTML生成器 ---
-    function createTaskHTML(t, todayTs) {
-        let dateTag = '';
-        let rowClass = 'task';
-        
-        // 计算日期状态
-        if(t.deadline && !t.completed) {
-            const dTs = new Date(t.deadline).getTime();
-            const diff = Math.ceil((dTs - todayTs) / 86400000);
-            if (diff < 0) dateTag = `<span class="tg due">逾期${Math.abs(diff)}天</span>`;
-            else if (diff === 0) dateTag = `<span class="tg due">今天截止</span>`;
-            else if (diff <= 3) dateTag = `<span class="tg due-warn">${diff}天后</span>`;
-            else dateTag = `<span class="tg">${diff}天后</span>`;
-        }
-
-        const catMap = { work:'投资', life:'生活', health:'健康' };
-        const catName = catMap[t.category] || '其他';
-        
-        // 按钮
-        const isArch = store.filter === 'archive';
-        const btns = isArch 
-            ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-undo"></i></button>
-               <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`
-            : `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-check-circle"></i></button>
-               <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`;
-
-        return `
-            <li class="${rowClass}">
-                <div class="t-body">
-                    <div class="t-txt">${esc(t.title)}</div>
-                    ${t.notes ? `<div class="t-sub">${esc(t.notes)}</div>` : ''}
-                    <div class="t-tags">
-                        <span class="tg">${catName}</span>
-                        ${dateTag}
-                    </div>
-                </div>
-                <div class="t-act">${btns}</div>
-            </li>
-        `;
-    }
-
-    // --- 交互操作 ---
-    function addTask() {
-        const title = document.getElementById('newTitle').value.trim();
-        if(!title) return alert('请写点什么');
-
-        const task = {
-            id: Date.now(),
-            title: title,
-            notes: document.getElementById('newNote').value.trim(),
-            category: store.inputCat,
-            deadline: document.getElementById('newDate').value,
-            urgent: document.getElementById('isUrgent').checked,
-            important: document.getElementById('isImp').checked,
-            completed: false,
-            createdAt: new Date().toISOString()
-        };
-
-        store.tasks.push(task);
-        
-        // 清空输入
-        document.getElementById('newTitle').value = '';
-        document.getElementById('newNote').value = '';
-        
-        saveLocal();
-    }
-
-    function toggleStatus(id) {
-        const t = store.tasks.find(x => x.id === id);
-        if(t) {
-            t.completed = !t.completed;
-            saveLocal();
-        }
-    }
-
-    function removeTask(id) {
-        if(!confirm('确定删除吗？')) return;
-        store.tasks = store.tasks.filter(x => x.id !== id);
-        saveLocal();
-    }
-
-    function clearArchive() {
-        if(!confirm('清空所有已归档项目？')) return;
-        store.tasks = store.tasks.filter(t => !t.completed);
-        saveLocal();
-    }
-
-    function setFilter(f) {
-        store.filter = f;
-        render();
-    }
-
-    function setInpCat(cat) {
-        store.inputCat = cat;
-        document.querySelectorAll('.cat-chip').forEach(el => el.classList.remove('selected'));
-        document.getElementById('chip-' + cat).classList.add('selected');
-    }
-
-    // --- 数据持久化 ---
     function saveLocal() {
-        store.lastActionTime = Date.now(); // 标记操作时间
-        store.tasks = deduplicate(store.tasks); // 保存前再次去重
+        store.lastActionTime = Date.now();
         localStorage.setItem('lm_data', JSON.stringify(store.tasks));
         render();
         syncToCloud();
     }
 
-    // 去重工具 (防止重复显示的最后一道防线)
-    function deduplicate(arr) {
-        const seen = new Set();
-        return arr.filter(item => {
-            const isDup = seen.has(item.id);
-            seen.add(item.id);
-            return !isDup;
-        });
-    }
+    function esc(s) { return s ? s.replace(/</g, "&lt;") : ''; }
 
-    function setHtml(id, htmlArr) {
-        const el = document.getElementById(id);
-        if(el) {
-            el.innerHTML = htmlArr.length ? htmlArr.join('') : '<div class="empty-hint">暂无事项</div>';
-        }
-    }
-
-    function esc(str) {
-        if(!str) return '';
-        return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    // --- GitHub 同步 (带防冲突逻辑) ---
+    // --- 增强版云同步 (带详细错误提示) ---
     async function fetchFromCloud() {
         if(!store.config.token) return;
-        
-        // 保护：如果用户在15秒内操作过，暂不拉取云端，避免覆盖
+        // 15秒保护期
         if(Date.now() - store.lastActionTime < 15000) return;
 
-        setStatus('正在同步...');
         try {
+            setStatus('同步中...');
             const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`;
             const res = await fetch(url, { headers: { Authorization: `token ${store.config.token}`, 'Cache-Control': 'no-cache' }});
             
             if(res.status === 404) {
-                // 文件不存在，上传本地的
+                // 文件不存在，自动创建
                 return syncToCloud();
+            } else if(res.status === 401) {
+                throw new Error("Token无效或过期(401)");
+            } else if(res.status === 403) {
+                throw new Error("无权限(403)");
+            } else if(!res.ok) {
+                throw new Error("网络错误 " + res.status);
             }
 
             const data = await res.json();
             store.fileSha = data.sha;
+            
+            // 解码 (防乱码)
             const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
             
-            // 拉取后如果发现用户刚刚又操作了，放弃合并
-            if(Date.now() - store.lastActionTime < 5000) {
-                setStatus('就绪');
-                return;
-            }
+            // 二次保护
+            if(Date.now() - store.lastActionTime < 5000) return setStatus('已同步');
 
-            store.tasks = deduplicate(content);
+            store.tasks = content; // 使用云端数据
+            
+            // 再次去重，防止云端也有脏数据
+            const seen = new Set();
+            store.tasks = store.tasks.filter(t => {
+                if(seen.has(t.id)) return false;
+                seen.add(t.id);
+                return true;
+            });
+
             localStorage.setItem('lm_data', JSON.stringify(store.tasks));
             render();
             setStatus('已同步');
         } catch(e) {
             console.error(e);
-            setStatus('同步错误');
+            setStatus('同步失败: ' + e.message);
         }
     }
 
@@ -444,50 +420,47 @@
             const body = { message: 'update', content: content };
             if(store.fileSha) body.sha = store.fileSha;
 
-            const url = `https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`;
-            const res = await fetch(url, {
+            const res = await fetch(`https://api.github.com/repos/${store.config.user}/${store.config.repo}/contents/${store.config.file}`, {
                 method: 'PUT',
                 headers: { Authorization: `token ${store.config.token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
 
-            if(res.status === 409) {
-                // 冲突，重新拉取
-                await fetchFromCloud();
-            } else {
+            if(res.status === 401) throw new Error("Token无效");
+            if(res.status === 409) return fetchFromCloud(); // 冲突重试
+
+            if(res.ok) {
                 const data = await res.json();
                 store.fileSha = data.content.sha;
                 setStatus('云端已存');
+            } else {
+                throw new Error("上传错 " + res.status);
             }
         } catch(e) {
-            setStatus('上传失败');
+            console.error(e);
+            setStatus('上传失败: ' + e.message);
         }
     }
 
-    // --- 设置逻辑 ---
-    function showSettings() {
+    // 设置逻辑
+    window.showSettings = () => {
         document.getElementById('cfgToken').value = store.config.token;
         document.getElementById('cfgUser').value = store.config.user;
         document.getElementById('cfgRepo').value = store.config.repo;
         document.getElementById('settingModal').style.display = 'flex';
-    }
-    function closeSettings() {
-        document.getElementById('settingModal').style.display = 'none';
-    }
-    function saveConfig() {
-        store.config.token = document.getElementById('cfgToken').value;
-        store.config.user = document.getElementById('cfgUser').value;
-        store.config.repo = document.getElementById('cfgRepo').value;
-        
+    };
+    window.closeSettings = () => document.getElementById('settingModal').style.display = 'none';
+    window.saveConfig = () => {
+        store.config.token = document.getElementById('cfgToken').value.trim();
+        store.config.user = document.getElementById('cfgUser').value.trim();
+        store.config.repo = document.getElementById('cfgRepo').value.trim();
         localStorage.setItem('gh_token', store.config.token);
         localStorage.setItem('gh_user', store.config.user);
         localStorage.setItem('gh_repo', store.config.repo);
-        
         closeSettings();
         fetchFromCloud();
-    }
+    };
     function setStatus(txt) { document.getElementById('statusTxt').innerText = txt; }
-
 </script>
 </body>
 </html>
