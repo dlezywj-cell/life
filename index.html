@@ -36,7 +36,7 @@
             overflow: hidden;
         }
 
-        /* --- 呼吸动画定义 --- */
+        /* 呼吸动画 */
         @keyframes breathe-red {
             0% { box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-color: transparent; }
             50% { box-shadow: 0 0 8px rgba(250, 81, 81, 0.4); border-color: rgba(250, 81, 81, 0.6); }
@@ -49,11 +49,13 @@
         .header-actions { font-size: 12px; color: #999; display: flex; align-items: center; gap: 15px;}
         .header-actions i { font-size: 16px; color: #333; cursor: pointer; }
 
-        /* --- Tabs --- */
-        .filter-bar { background: var(--wx-header); display: flex; padding: 0 12px; border-bottom: 1px solid #dcdcdc; overflow-x: auto; flex-shrink: 0; gap: 20px; height: 40px; align-items: center; }
+        /* --- Tabs (过滤器) --- */
+        .filter-bar { background: var(--wx-header); display: flex; padding: 0 12px; border-bottom: 1px solid #dcdcdc; overflow-x: auto; flex-shrink: 0; gap: 24px; height: 44px; align-items: center; }
         .filter-item { font-size: 14px; color: var(--wx-text-sec); cursor: pointer; white-space: nowrap; height: 100%; display: flex; align-items: center; position: relative; }
         .filter-item.active { color: var(--wx-green); font-weight: 600; }
         .filter-item.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 16px; height: 3px; background: var(--wx-green); border-radius: 2px; }
+        .filter-count { font-size: 10px; margin-left: 4px; background: #e0e0e0; padding: 0 4px; border-radius: 4px; color: #666; }
+        .filter-item.active .filter-count { background: #d1f2d9; color: var(--wx-green); }
 
         /* --- Scroll Area --- */
         .main-scroll { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
@@ -73,10 +75,9 @@
         .mini-tag.active { background: #e9f9f0; color: #07c160; border-color: #07c160; font-weight: 500; }
         .btn-send { background: var(--wx-green); color: white; border: none; padding: 5px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
 
-        /* --- Matrix & Lists --- */
+        /* --- Matrix --- */
         .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         @media (max-width: 600px) { .matrix-grid { grid-template-columns: 1fr; } }
-
         .q-box { background: var(--wx-card); border-radius: 8px; padding: 12px; min-height: 180px; }
         .q-head { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
         .dot { width: 6px; height: 6px; border-radius: 50%; }
@@ -86,15 +87,12 @@
         .q3 .q-head { color: var(--q3-color); } .q3 .dot { background: var(--q3-color); }
         .q4 .q-head { color: var(--q4-color); } .q4 .dot { background: var(--q4-color); }
 
+        /* Tasks */
         .task-list { list-style: none; padding: 0; margin: 0; }
         .task-row { padding: 10px 0; border-bottom: 1px solid #f5f5f5; display: flex; gap: 10px; transition: all 0.3s; border-left: 3px solid transparent; padding-left: 4px;}
         .task-row:last-child { border-bottom: none; }
         
-        /* 紧迫感样式 */
-        .task-urgent-critical {
-            animation: breathe-red 2s infinite ease-in-out; /* 呼吸动画 */
-            border-left-color: var(--wx-red);
-        }
+        .task-urgent-critical { animation: breathe-red 2s infinite ease-in-out; border-left-color: var(--wx-red); }
         .text-critical { color: var(--wx-red); font-weight: 700; }
         .text-warning { color: var(--wx-orange); font-weight: 600; }
 
@@ -109,7 +107,6 @@
         .tag-life { color: #e6a23c; background: #fbf6ec; }
         .tag-health { color: #07c160; background: #ecf9f2; }
         
-        /* 截止日期标签的动态颜色 */
         .tag-due-critical { color: white; background: var(--wx-red); font-weight: bold; }
         .tag-due-warning { color: white; background: var(--wx-orange); }
         .tag-due-normal { color: #fa5151; background: #fef0f0; }
@@ -148,11 +145,11 @@
 </header>
 
 <div class="filter-bar">
-    <div class="filter-item active" onclick="setFilter('all')" data-filter="all">全部</div>
-    <div class="filter-item" onclick="setFilter('work')" data-filter="work">投资</div>
-    <div class="filter-item" onclick="setFilter('life')" data-filter="life">生活</div>
-    <div class="filter-item" onclick="setFilter('health')" data-filter="health">健康</div>
-    <div class="filter-item" onclick="setFilter('archive')" data-filter="archive">归档</div>
+    <div class="filter-item active" onclick="setFilter('all')" data-filter="all">全部 <span class="filter-count" id="cnt-all">0</span></div>
+    <div class="filter-item" onclick="setFilter('work')" data-filter="work">投资 <span class="filter-count" id="cnt-work">0</span></div>
+    <div class="filter-item" onclick="setFilter('life')" data-filter="life">生活 <span class="filter-count" id="cnt-life">0</span></div>
+    <div class="filter-item" onclick="setFilter('health')" data-filter="health">健康 <span class="filter-count" id="cnt-health">0</span></div>
+    <div class="filter-item" onclick="setFilter('archive')" data-filter="archive">归档 <span class="filter-count" id="cnt-archive">0</span></div>
 </div>
 
 <div class="main-scroll">
@@ -202,6 +199,7 @@
     </div>
 </div>
 
+<!-- Modal 弹窗 -->
 <div id="confirmModal" class="modal-mask">
     <div class="confirm-box">
         <div class="c-content" id="modalText">确认删除吗？</div>
@@ -212,6 +210,7 @@
     </div>
 </div>
 
+<!-- 设置面板 -->
 <div id="settingsPanel" class="settings-layer">
     <div class="set-header">
         <i class="fas fa-arrow-left" onclick="closeSettings()" style="font-size:18px; cursor:pointer;"></i>
@@ -254,8 +253,10 @@
     };
 
     function render() {
+        // 清空列表
         document.querySelectorAll('.task-list').forEach(el => el.innerHTML = '');
         
+        // 模式判断
         const isArchive = currentFilter === 'archive';
         document.getElementById('viewMatrix').style.display = isArchive ? 'none' : 'grid';
         document.getElementById('inputArea').style.display = isArchive ? 'none' : 'flex';
@@ -263,18 +264,33 @@
 
         const today = new Date(); today.setHours(0,0,0,0);
         let count = {q1:0, q2:0, q3:0, q4:0, arch:0};
+        
+        // 统计器 (用于更新Tab上的数字)
+        let tabCounts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
 
         tasks.forEach(t => {
-            // 归档消失逻辑：如果是归档模式，只显已完成；如果是计划模式，只显未完成
-            // 这一步 ensure 了点击归档后立马在当前列表消失
-            if(isArchive) {
-                if(!t.completed) return;
+            // 1. 全局统计 (不管当前Filter是什么，先算出每个分类有多少任务，方便显示在Tab上)
+            if(t.completed) {
+                tabCounts.archive++;
             } else {
+                tabCounts.all++;
+                if(t.category === 'work') tabCounts.work++;
+                if(t.category === 'life') tabCounts.life++;
+                if(t.category === 'health') tabCounts.health++;
+            }
+
+            // 2. 过滤器逻辑 (决定当前任务是否显示)
+            if(isArchive) {
+                // 如果是归档模式，只显示已完成
+                if(!t.completed) return; 
+            } else {
+                // 如果是计划模式，只显示未完成
                 if(t.completed) return;
+                // 核心修复：如果Filter不是'all'，则严格比对category
                 if(currentFilter !== 'all' && t.category !== currentFilter) return;
             }
 
-            // 决定容器
+            // 3. 决定容器
             let tid = 'archiveList';
             if(!isArchive) {
                 if(t.urgent && t.important) { tid = 'q1'; count.q1++; }
@@ -283,7 +299,7 @@
                 else { tid = 'q4'; count.q4++; }
             } else { count.arch++; }
 
-            // --- 视觉紧迫性计算 ---
+            // 4. 生成样式
             let rowClass = `task-row ${isArchive ? 'arch-row' : ''}`;
             let titleClass = 't-title';
             let dateTagClass = 'tag-due-normal';
@@ -291,33 +307,28 @@
             
             if(t.deadline && !t.completed) {
                 const diff = Math.ceil((new Date(t.deadline) - today)/86400000);
-                
                 if(diff < 0) {
                     dateText = `逾期${Math.abs(diff)}天`;
-                    rowClass += ' task-urgent-critical'; // 呼吸特效
-                    titleClass += ' text-critical';      // 红色加粗标题
+                    rowClass += ' task-urgent-critical';
+                    titleClass += ' text-critical';
                     dateTagClass = 'tag-due-critical';
                 } else if(diff === 0) {
                     dateText = '今天截止';
-                    rowClass += ' task-urgent-critical'; // 呼吸特效
+                    rowClass += ' task-urgent-critical';
                     titleClass += ' text-critical';
                     dateTagClass = 'tag-due-critical';
                 } else if(diff <= 3) {
                     dateText = `${diff}天后`;
-                    titleClass += ' text-warning';       // 橙色警告标题
+                    titleClass += ' text-warning';
                     dateTagClass = 'tag-due-warning';
                 } else {
                     dateText = `${diff}天后`;
                 }
             }
 
-            // 构建标签 HTML
             let tags = `<span class="tag tag-${t.category}">${{'work':'投资','life':'生活','health':'健康'}[t.category]}</span>`;
-            if(dateText) {
-                tags += `<span class="tag ${dateTagClass}">${dateText}</span>`;
-            }
+            if(dateText) tags += `<span class="tag ${dateTagClass}">${dateText}</span>`;
 
-            // 构建日期信息 HTML (仅归档)
             let dateInfo = '';
             if(isArchive) {
                 const createDate = new Date(t.createdAt || t.id).toLocaleDateString();
@@ -345,18 +356,26 @@
             document.querySelector(`#${tid}`).appendChild(li);
         });
 
+        // 空状态
         if(isArchive && count.arch === 0) document.getElementById('archiveList').innerHTML = '<div class="empty-tip">暂无历史记录</div>';
         if(!isArchive) ['q1','q2','q3','q4'].forEach(k => {
             if(count[k]===0) document.querySelector(`#${k} ul`).innerHTML = '<div class="empty-tip" style="padding:10px 0;">空</div>';
         });
 
+        // 更新 Tab 样式
         document.querySelectorAll('.filter-item').forEach(el => {
             el.classList.toggle('active', el.dataset.filter === currentFilter);
         });
+
+        // 更新 Tab 数字
+        document.getElementById('cnt-all').innerText = tabCounts.all;
+        document.getElementById('cnt-work').innerText = tabCounts.work;
+        document.getElementById('cnt-life').innerText = tabCounts.life;
+        document.getElementById('cnt-health').innerText = tabCounts.health;
+        document.getElementById('cnt-archive').innerText = tabCounts.archive;
     }
 
-    // --- 核心操作 ---
-
+    // --- 操作逻辑 ---
     window.addTask = function() {
         const title = document.getElementById('title').value.trim();
         if(!title) return alert('请填写标题');
@@ -382,7 +401,6 @@
         if(t) { 
             t.completed = !t.completed; 
             t.completedAt = t.completed ? new Date().toISOString() : null;
-            // 关键：立即触发保存和渲染，无需等待
             save(); 
         }
     };
@@ -413,11 +431,8 @@
     function esc(s) { return s ? s.replace(/</g,'&lt;') : ''; }
 
     function save() {
-        // 1. 立即存本地
         localStorage.setItem('lm_data', JSON.stringify(tasks));
-        // 2. 立即渲染 (实现归档即消失)
         render();
-        // 3. 异步存云端
         pushGitHub();
     }
 
