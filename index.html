@@ -45,6 +45,12 @@
             -webkit-font-smoothing: antialiased; 
         }
 
+        /* 解决 Hover 粘滞问题：动画期间禁用鼠标交互 */
+        body.animating .icon-btn {
+            pointer-events: none !important;
+            color: #d1d1d6 !important; /* 强制灰色 */
+        }
+
         /* 顶部导航 */
         header { 
             background: rgba(255, 255, 255, 0.72); 
@@ -82,11 +88,51 @@
         /* 主区域 */
         .main { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
 
-        /* 输入框 */
-        .input-box { background: var(--card); padding: 20px; border-radius: var(--radius-l); box-shadow: var(--shadow-card); transition: border 0.3s; border: 2px solid transparent; }
+        /* 新增：折叠/展开触发器 */
+        .toggle-input-btn {
+            background: rgba(255,255,255,0.8);
+            color: var(--primary);
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            padding: 12px;
+            border-radius: var(--radius-m);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px; /* 给下方预留一点空间 */
+        }
+        .toggle-input-btn:hover { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+        .toggle-input-btn.is-open { display: none; } /* 打开后隐藏按钮，或者你可以保留并改变样式 */
+
+        /* 输入框容器 - 增加动画控制 */
+        .input-container {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* Apple 风格缓动 */
+            margin-bottom: 0;
+        }
+        .input-container.show {
+            max-height: 500px; /* 足够大即可 */
+            opacity: 1;
+            transform: translateY(0);
+            margin-bottom: 20px; /* 展开时增加底部间距 */
+        }
+
+        .input-box { background: var(--card); padding: 20px; border-radius: var(--radius-l); box-shadow: var(--shadow-card); transition: border 0.3s; border: 2px solid transparent; position: relative; }
         .input-box.editing { border-color: var(--info); }
         
-        .inp-title { width: 100%; border: none; font-size: 18px; font-weight: 600; outline: none; margin-bottom: 12px; background: transparent; font-family: inherit; }
+        /* 关闭按钮 (输入框内) */
+        .close-input { position: absolute; top: 15px; right: 15px; color: #c7c7cc; cursor: pointer; font-size: 16px; padding: 5px; }
+        .close-input:hover { color: var(--text-sec); }
+
+        .inp-title { width: 100%; border: none; font-size: 18px; font-weight: 600; outline: none; margin-bottom: 12px; background: transparent; font-family: inherit; margin-right: 20px;}
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #f0f0f0; font-size: 14px; outline: none; resize: none; height: 28px; color: var(--text-sec); margin-bottom: 16px; font-family: inherit; background: transparent; }
         .inp-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
         .date-inp { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--primary); font-weight: 500; font-family: inherit; min-width: 130px;}
@@ -120,13 +166,13 @@
         .panel ul::-webkit-scrollbar-track { background: transparent; }
         .panel ul::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 4px; }
 
-        /* 列表项 - 修改后的布局 */
+        /* 列表项 */
         .task { 
-            padding: 10px 0; /* 减少垂直间距，更紧凑 */
+            padding: 10px 0; 
             border-bottom: 1px solid #f5f5f7; 
             display: flex; 
-            gap: 8px; /* 减少左右间距 */
-            align-items: flex-start; /* 顶部对齐，防止按钮组撑高 */
+            gap: 8px; 
+            align-items: flex-start; 
             animation: fadeIn 0.3s ease; 
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -151,24 +197,23 @@
         .tg.due { color: #fff; background: var(--danger); }
         .tg.due-warn { color: #fff; background: var(--warn); }
         
-        /* 按钮组 - 改为横排右上 */
         .t-act { 
             display: flex; 
-            flex-direction: row; /* 关键修改：横向排列 */
-            gap: 2px; /* 按钮紧凑 */
-            margin-top: -2px; /* 视觉微调，与标题第一行对齐 */
+            flex-direction: row; 
+            gap: 2px; 
+            margin-top: -2px; 
         }
         .icon-btn { 
             border: none; background: transparent; color: #d1d1d6; 
-            font-size: 16px; /* 稍微调小以适应横排 */
+            font-size: 16px; 
             cursor: pointer; 
-            padding: 5px; /* 减小点击内边距 */
+            padding: 5px; 
+            transition: color 0.2s; /* 添加平滑过渡 */
         }
         .icon-btn.ok:hover { color: var(--success); }
         .icon-btn.del:hover { color: var(--danger); }
         .icon-btn.edit:hover { color: var(--info); }
 
-        /* 归档元数据 */
         .date-meta { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
         .meta-row { font-size: 11px; color: #aaa; display: flex; align-items: center; gap: 5px; }
 
@@ -206,21 +251,31 @@
 </div>
 
 <div class="main">
-    <div class="input-box" id="inputArea">
-        <input type="text" id="newTitle" class="inp-title" placeholder="添加新事项...">
-        <textarea id="newNote" class="inp-note" placeholder="备注 (可选)"></textarea>
-        <div class="inp-row">
-            <input type="datetime-local" id="newDate" class="date-inp">
-            <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急 🔥</label>
-            <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要 ⭐</label>
-        </div>
-        <div class="tag-row">
-            <div class="cats">
-                <div class="cat-chip selected" onclick="setInpCat('work')" id="chip-work">💼 投资</div>
-                <div class="cat-chip" onclick="setInpCat('life')" id="chip-life">🏠 生活</div>
-                <div class="cat-chip" onclick="setInpCat('health')" id="chip-health">❤️ 健康</div>
+    
+    <!-- 展开按钮 -->
+    <div class="toggle-input-btn" id="toggleBtn" onclick="toggleInput(true)">
+        <i class="fas fa-plus-circle"></i> 新建事项
+    </div>
+
+    <!-- 录入区域容器 -->
+    <div class="input-container" id="inputContainer">
+        <div class="input-box" id="inputArea">
+            <i class="fas fa-times close-input" onclick="toggleInput(false)"></i>
+            <input type="text" id="newTitle" class="inp-title" placeholder="添加新事项...">
+            <textarea id="newNote" class="inp-note" placeholder="备注 (可选)"></textarea>
+            <div class="inp-row">
+                <input type="datetime-local" id="newDate" class="date-inp">
+                <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急 🔥</label>
+                <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要 ⭐</label>
             </div>
-            <button class="btn-add" id="actionBtn" onclick="addTask()"><i class="fas fa-arrow-up"></i></button>
+            <div class="tag-row">
+                <div class="cats">
+                    <div class="cat-chip selected" onclick="setInpCat('work')" id="chip-work">💼 投资</div>
+                    <div class="cat-chip" onclick="setInpCat('life')" id="chip-life">🏠 生活</div>
+                    <div class="cat-chip" onclick="setInpCat('health')" id="chip-health">❤️ 健康</div>
+                </div>
+                <button class="btn-add" id="actionBtn" onclick="addTask()"><i class="fas fa-arrow-up"></i></button>
+            </div>
         </div>
     </div>
 
@@ -324,6 +379,46 @@
         }
     }
 
+    // --- 界面交互逻辑 (新增) ---
+    
+    // 控制输入框展开/折叠
+    function toggleInput(show) {
+        const con = document.getElementById('inputContainer');
+        const btn = document.getElementById('toggleBtn');
+        const titleInput = document.getElementById('newTitle');
+        
+        if (show) {
+            con.classList.add('show');
+            btn.classList.add('is-open'); // 隐藏展开按钮
+            setTimeout(() => {
+                if(!store.editingId) titleInput.focus();
+            }, 300);
+        } else {
+            con.classList.remove('show');
+            btn.classList.remove('is-open'); // 显示展开按钮
+            resetInputState(); // 关掉时重置状态
+        }
+    }
+
+    function resetInputState() {
+        store.editingId = null;
+        document.getElementById('newTitle').value = '';
+        document.getElementById('newNote').value = '';
+        document.getElementById('newDate').value = '';
+        document.getElementById('actionBtn').innerHTML = '<i class="fas fa-arrow-up"></i>';
+        document.getElementById('actionBtn').classList.remove('update-mode');
+        document.getElementById('inputArea').classList.remove('editing');
+    }
+
+    // --- 防止按钮 Hover 粘滞的辅助函数 ---
+    function preventHoverSticky() {
+        document.body.classList.add('animating');
+        setTimeout(() => {
+            document.body.classList.remove('animating');
+        }, 400); // 400ms 后恢复交互
+    }
+
+
     // --- Mindset Garden 同步核心逻辑 ---
     async function autoSyncFromCloud() {
         if(!store.config.token) return;
@@ -413,6 +508,9 @@
     // --- 业务操作 ---
 
     window.editTask = function(id) {
+        // 编辑时强制展开输入框
+        toggleInput(true);
+
         const t = store.tasks.find(x => x.id == id);
         if(!t) return;
 
@@ -440,7 +538,9 @@
         
         const box = document.getElementById('inputArea');
         box.classList.add('editing');
-        box.scrollIntoView({ behavior: 'smooth' });
+        
+        // 滚动到顶部
+        document.getElementById('inputContainer').scrollIntoView({ behavior: 'smooth' });
     };
 
     window.addTask = function() {
@@ -459,6 +559,7 @@
                 t.urgent = document.getElementById('isUrgent').checked;
                 t.important = document.getElementById('isImp').checked;
             }
+            // 编辑完成后不强制折叠，只是重置状态，方便继续操作
             store.editingId = null;
             const btn = document.getElementById('actionBtn');
             btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
@@ -481,12 +582,15 @@
             store.tasks.push(task);
         }
         
+        // 清空输入框
         document.getElementById('newTitle').value = '';
         document.getElementById('newNote').value = '';
+        
         saveAndSync();
     };
 
     window.toggleStatus = function(id) {
+        preventHoverSticky(); // 触发防粘滞
         const t = store.tasks.find(x => x.id == id);
         if(t) {
             t.completed = !t.completed;
@@ -497,14 +601,10 @@
 
     window.removeTask = function(id) {
         if(confirm('删除此条目？')) {
+            preventHoverSticky(); // 触发防粘滞
             store.tasks = store.tasks.filter(x => x.id != id);
             if(store.editingId == id) {
-                store.editingId = null;
-                document.getElementById('actionBtn').innerHTML = '<i class="fas fa-arrow-up"></i>';
-                document.getElementById('actionBtn').classList.remove('update-mode');
-                document.getElementById('inputArea').classList.remove('editing');
-                document.getElementById('newTitle').value = '';
-                document.getElementById('newNote').value = '';
+                resetInputState();
             }
             saveAndSync();
         }
@@ -512,12 +612,21 @@
 
     window.clearArchive = function() {
         if(confirm('清空所有归档记录？')) {
+            preventHoverSticky();
             store.tasks = store.tasks.filter(t => !t.completed);
             saveAndSync();
         }
     };
 
-    window.setFilter = f => { store.filter = f; render(); };
+    window.setFilter = f => { 
+        store.filter = f; 
+        
+        // 切换到归档时，自动隐藏输入框
+        if(f === 'archive') toggleInput(false);
+        
+        render(); 
+    };
+    
     window.setInpCat = c => { 
         store.inputCat = c; 
         document.querySelectorAll('.cat-chip').forEach(el => el.classList.remove('selected'));
@@ -625,7 +734,10 @@
 
         const isArch = store.filter === 'archive';
         document.getElementById('matrixView').style.display = isArch ? 'none' : 'grid';
-        document.getElementById('inputArea').style.display = isArch ? 'none' : 'block';
+        
+        // 归档模式下强制隐藏新建按钮和输入框
+        document.getElementById('toggleBtn').style.display = isArch ? 'none' : (document.getElementById('inputContainer').classList.contains('show') ? 'none' : 'flex');
+        
         document.getElementById('archiveView').style.display = isArch ? 'block' : 'none';
     }
 
