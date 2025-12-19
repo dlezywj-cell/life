@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Life Manager Pro</title>
-    <!-- 使用 HTTPS 协议的稳定 CDN -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -17,7 +16,6 @@
             --danger: #ff3b30;
             --warn: #ff9500;
             --info: #5856d6;
-            --q1: #ff3b30; --q2: #007aff; --q3: #ff9500; --q4: #8e8e93;
             --shadow-card: 0 4px 12px rgba(0,0,0,0.04);
             --radius-l: 18px;
             --radius-m: 12px;
@@ -29,10 +27,9 @@
             display: flex; flex-direction: column; overflow: hidden; -webkit-font-smoothing: antialiased; 
         }
 
-        /* 动画期间禁用交互，防止误触 */
         body.animating .icon-btn { pointer-events: none !important; color: #d1d1d6 !important; }
 
-        /* 1. 顶部 Header */
+        /* Header */
         header { 
             background: rgba(255, 255, 255, 0.8); 
             backdrop-filter: saturate(180%) blur(20px); 
@@ -49,134 +46,113 @@
         .sync-dot.error { background: var(--danger); }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        /* 2. 录入区域 (Entry Section) */
-        .entry-section {
-            background: var(--bg);
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            z-index: 90;
-        }
-
-        /* 展开按钮 */
+        /* Input Section */
+        .entry-section { background: var(--bg); flex-shrink: 0; display: flex; flex-direction: column; z-index: 90; }
         .toggle-bar {
-            background: var(--card);
-            color: var(--primary);
-            font-size: 14px; font-weight: 600;
-            padding: 10px; margin: 10px 16px 0 16px;
-            border-radius: var(--radius-m);
-            text-align: center; cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            transition: all 0.2s;
+            background: var(--card); color: var(--primary); font-size: 14px; font-weight: 600;
+            padding: 10px; margin: 10px 16px 0 16px; border-radius: var(--radius-m);
+            text-align: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;
         }
-        .toggle-bar:active { transform: scale(0.98); background: #f9f9f9; }
         .toggle-bar.hidden { display: none; }
 
-        /* 输入面板 */
         .input-panel {
             max-height: 0; opacity: 0; overflow: hidden;
-            transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
-            margin: 0 16px;
+            transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease; margin: 0 16px;
         }
-        .input-panel.show {
-            max-height: 400px; opacity: 1;
-            margin-top: 10px; margin-bottom: 5px; 
-        }
+        .input-panel.show { max-height: 400px; opacity: 1; margin-top: 10px; margin-bottom: 5px; }
         
         .input-box {
             background: var(--card); padding: 16px; border-radius: var(--radius-l);
             box-shadow: var(--shadow-card); border: 2px solid transparent; position: relative;
         }
         .input-box.editing { border-color: var(--info); }
-        
         .close-btn { position: absolute; top: 12px; right: 12px; padding: 4px; color: #ccc; cursor: pointer; }
-        
         .inp-title { width: 100%; border: none; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 10px; background: transparent; padding-right: 20px; }
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; outline: none; resize: none; height: 24px; color: var(--text-sec); margin-bottom: 12px; background: transparent; font-family: inherit; }
         
-        /* 单行工具栏布局 */
-        .input-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between; 
-            flex-wrap: wrap; 
-            gap: 12px;
-            margin-top: 4px;
-        }
-
+        .input-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
         .toolbar-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-
-        .date-inp { 
-            background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 8px; 
-            font-size: 12px; color: var(--primary); font-family: inherit;
-            max-width: 125px; 
-        }
-
-        .check-group { display: flex; gap: 10px; flex-shrink: 0; }
-        .check-lbl { font-size: 13px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
+        .date-inp { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 8px; font-size: 12px; color: var(--primary); font-family: inherit; max-width: 125px; }
+        /* 隐藏复选框组，因为不再需要分象限，但为了数据兼容和逻辑保留代码结构，这里选择 visually hidden 或者保留让用户作为标记使用。
+           既然用户说“不用再分紧急重要”，我这里把它们隐藏掉，简化录入。如果想保留作为tag，可以删除 display:none */
+        .check-group { display: none; } 
 
         .toolbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-
         .cats { display: flex; gap: 6px; }
-        .cat-chip { 
-            font-size: 12px; padding: 5px 10px; 
-            background: #f2f2f7; color: var(--text-sec); 
-            border-radius: 14px; cursor: pointer; font-weight: 500; white-space: nowrap;
-        }
+        .cat-chip { font-size: 12px; padding: 5px 10px; background: #f2f2f7; color: var(--text-sec); border-radius: 14px; cursor: pointer; font-weight: 500; white-space: nowrap; }
         .cat-chip.selected { background: var(--text-main); color: #fff; }
-
-        .btn-add { 
-            background: var(--primary); color: white; border: none; 
-            width: 32px; height: 32px; border-radius: 50%; 
-            font-size: 14px; cursor: pointer; flex-shrink: 0;
-            box-shadow: 0 4px 10px rgba(0,122,255,0.3); 
-            display: flex; align-items: center; justify-content: center; 
-        }
+        .btn-add { background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,122,255,0.3); display: flex; align-items: center; justify-content: center; }
         .btn-add.update-mode { background: var(--info); box-shadow: 0 4px 10px rgba(88, 86, 214, 0.3); }
 
-        /* 3. 过滤器 Tabs */
-        .tabs-wrapper { padding: 10px 16px; flex-shrink: 0; background: var(--bg); }
-        .tabs { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+        /* Tabs (Filters) - 样式大幅修改 */
+        .tabs-wrapper { padding: 15px 16px 10px 16px; flex-shrink: 0; background: var(--bg); }
+        .tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
         .tabs::-webkit-scrollbar { display: none; }
+        
         .tab { 
             font-size: 14px; color: var(--text-sec); white-space: nowrap; cursor: pointer; 
-            padding: 5px 12px; border-radius: 16px; transition: 0.3s; display: flex; align-items: center;
+            padding: 8px 16px; border-radius: 20px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+            display: flex; align-items: center; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         }
-        .tab.active { color: var(--text-main); background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.06); font-weight: 600; }
-        .badge { background: rgba(0,0,0,0.06); font-size: 10px; padding: 1px 5px; border-radius: 8px; margin-left: 4px; }
-        .tab.active .badge { background: var(--primary); color: #fff; }
-
-        /* 4. 主内容区 (Grid) */
-        .main { flex: 1; overflow-y: auto; padding: 10px 16px 40px 16px; display: flex; flex-direction: column; gap: 16px; }
-
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media(max-width: 650px) { .grid { grid-template-columns: 1fr; } }
         
-        .panel { background: var(--card); border-radius: var(--radius-l); padding: 14px; min-height: 120px; box-shadow: var(--shadow-card); position: relative; display: flex; flex-direction: column; }
-        .panel::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
-        .p-head { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-        .panel ul { list-style: none; padding: 0; margin: 0; max-height: 320px; overflow-y: auto; }
+        /* 选中状态：蓝色背景，白色文字 */
+        .tab.active { 
+            background: var(--primary); 
+            color: #fff; 
+            box-shadow: 0 4px 12px rgba(0,122,255,0.3); 
+            transform: translateY(-1px);
+            font-weight: 600;
+        }
+        
+        .badge { 
+            background: rgba(0,0,0,0.06); 
+            font-size: 11px; padding: 2px 7px; border-radius: 10px; margin-left: 8px; 
+            transition: background 0.3s;
+        }
+        /* 选中时，角标颜色调整为半透明白 */
+        .tab.active .badge { 
+            background: rgba(255,255,255,0.25); 
+            color: #fff; 
+        }
 
-        .task { padding: 10px 0; border-bottom: 1px solid #f5f5f7; display: flex; gap: 8px; align-items: flex-start; animation: fadeIn 0.3s ease; }
+        /* Main List Area - 单一列表结构 */
+        .main { flex: 1; overflow-y: auto; padding: 10px 16px 40px 16px; display: flex; flex-direction: column; }
+        
+        .list-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px; padding: 0 4px;
+        }
+        .list-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
+        .clear-btn { color: var(--danger); font-size: 13px; font-weight: 500; cursor: pointer; padding: 4px 8px; border-radius: 8px; background: rgba(255,59,48,0.1); display: none; }
+
+        .task-list {
+            background: var(--card); border-radius: var(--radius-l); padding: 8px 16px;
+            box-shadow: var(--shadow-card);
+            min-height: 200px;
+        }
+        .task-list ul { list-style: none; padding: 0; margin: 0; }
+
+        /* Task Item */
+        .task { padding: 12px 0; border-bottom: 1px solid #f5f5f7; display: flex; gap: 10px; align-items: flex-start; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .task:last-child { border-bottom: none; }
         
         .t-body { flex: 1; min-width: 0; }
-        .t-txt { font-size: 14px; font-weight: 500; color: var(--text-main); line-height: 1.4; }
-        .t-sub { font-size: 12px; color: var(--text-sec); margin-top: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .t-tags { margin-top: 4px; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-        .tg { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #f2f2f7; color: var(--text-sec); }
+        .t-txt { font-size: 15px; font-weight: 500; color: var(--text-main); line-height: 1.4; margin-bottom: 2px;}
+        .t-sub { font-size: 13px; color: var(--text-sec); margin-top: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .t-tags { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .tg { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f2f2f7; color: var(--text-sec); font-weight: 500; }
         
-        /* 动态样式将在 JS 中控制 */
-        
-        .t-act { display: flex; gap: 4px; margin-top: -2px; }
-        .icon-btn { border: none; background: transparent; color: #d1d1d6; font-size: 16px; cursor: pointer; padding: 4px; transition: color 0.2s; }
+        .t-act { display: flex; gap: 8px; margin-top: 0; align-self: flex-start; }
+        .icon-btn { border: none; background: transparent; color: #d1d1d6; font-size: 18px; cursor: pointer; padding: 4px; transition: color 0.2s; }
         .icon-btn.ok:hover { color: var(--success); }
         .icon-btn.del:hover { color: var(--danger); }
         .icon-btn.edit:hover { color: var(--info); }
+        
+        .empty-state { text-align: center; color: #ccc; padding: 40px 0; font-size: 14px; }
 
-        /* 设置弹窗 */
+        /* Modal */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; }
         .modal-box { background: rgba(255,255,255,0.95); width: 80%; max-width: 300px; border-radius: 16px; padding: 20px; }
         .modal input { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #eee; border-radius: 8px; box-sizing: border-box;}
@@ -196,7 +172,7 @@
 
 <div class="entry-section">
     <div class="toggle-bar" id="toggleBar" onclick="toggleInput(true)">
-        <i class="fas fa-plus-circle"></i> 录入 / 新建事项
+        <i class="fas fa-plus-circle"></i> 新建事项
     </div>
 
     <div class="input-panel" id="inputPanel">
@@ -208,9 +184,10 @@
             <div class="input-toolbar">
                 <div class="toolbar-left">
                     <input type="datetime-local" id="newDate" class="date-inp">
-                    <div class="check-group">
-                        <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急🔥</label>
-                        <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要⭐</label>
+                    <!-- 隐藏紧急重要，因为不再作为分类依据 -->
+                    <div class="check-group" style="display:none;">
+                        <input type="checkbox" id="isUrgent">
+                        <input type="checkbox" id="isImp" checked>
                     </div>
                 </div>
                 <div class="toolbar-right">
@@ -237,35 +214,13 @@
 </div>
 
 <div class="main">
-    <div class="grid" id="matrixView">
-        <div class="panel">
-            <style>.panel:nth-child(1)::before{background:var(--q1);}</style>
-            <div class="p-head" style="color:var(--q1)">马上做 <i class="fas fa-fire-alt"></i></div>
-            <ul id="list-q1"></ul>
-        </div>
-        <div class="panel">
-            <style>.panel:nth-child(2)::before{background:var(--q2);}</style>
-            <div class="p-head" style="color:var(--q2)">计划做 <i class="fas fa-calendar-alt"></i></div>
-            <ul id="list-q2"></ul>
-        </div>
-        <div class="panel">
-            <style>.panel:nth-child(3)::before{background:var(--q3);}</style>
-            <div class="p-head" style="color:var(--q3)">抽空做 <i class="fas fa-coffee"></i></div>
-            <ul id="list-q3"></ul>
-        </div>
-        <div class="panel">
-            <style>.panel:nth-child(4)::before{background:var(--q4);}</style>
-            <div class="p-head" style="color:var(--q4)">备忘录 <i class="fas fa-sticky-note"></i></div>
-            <ul id="list-q4"></ul>
-        </div>
+    <div class="list-header">
+        <div class="list-title" id="viewTitle">所有待办</div>
+        <div class="clear-btn" id="clearBtn" onclick="clearArchive()">清空历史</div>
     </div>
-
-    <div class="panel archive-view" id="archiveView" style="display:none; border-left:none;">
-        <div class="p-head" style="justify-content:space-between; color:var(--text-main);">
-            <span>历史记录</span>
-            <span onclick="clearArchive()" style="color:var(--danger); cursor:pointer; font-size:12px;">清空</span>
-        </div>
-        <ul id="list-arch"></ul>
+    
+    <div class="task-list">
+        <ul id="mainList"></ul>
     </div>
 </div>
 
@@ -337,8 +292,8 @@
             notes: document.getElementById('newNote').value.trim(),
             category: store.inputCat,
             deadline: document.getElementById('newDate').value,
-            urgent: document.getElementById('isUrgent').checked,
-            important: document.getElementById('isImp').checked
+            urgent: false, // 默认false，保留字段兼容性
+            important: true 
         };
 
         if (store.editingId) {
@@ -374,8 +329,6 @@
              dateVal = (new Date(d - offset)).toISOString().slice(0, 16);
         }
         document.getElementById('newDate').value = dateVal;
-        document.getElementById('isUrgent').checked = t.urgent;
-        document.getElementById('isImp').checked = t.important;
         setInpCat(t.category);
         store.editingId = id;
         document.getElementById('actionBtn').innerHTML = '<i class="fas fa-check"></i>';
@@ -399,7 +352,7 @@
     };
     
     window.clearArchive = () => {
-        if(confirm('清空历史？')) { store.tasks = store.tasks.filter(t => !t.completed); saveAndSync(); }
+        if(confirm('清空所有已归档记录？')) { store.tasks = store.tasks.filter(t => !t.completed); saveAndSync(); }
     };
 
     window.setInpCat = c => { 
@@ -415,11 +368,12 @@
     };
 
     function render() {
-        const buckets = { q1:[], q2:[], q3:[], q4:[], arch:[] };
         const counts = { all:0, work:0, life:0, health:0, archive:0 };
         const now = Date.now();
+        const listHTML = [];
         
-        const list = [...store.tasks].sort((a,b) => {
+        // 排序：未完成按时间，已完成按归档时间
+        const sortedList = [...store.tasks].sort((a,b) => {
             if(a.completed !== b.completed) return a.completed ? 1 : -1;
             if(a.completed) return new Date(b.completedAt) - new Date(a.completedAt);
             if(a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
@@ -427,85 +381,72 @@
             return b.id - a.id;
         });
 
-        list.forEach(t => {
+        sortedList.forEach(t => {
+            // 计算数量
             if(t.completed) counts.archive++;
             else { counts.all++; if(counts.hasOwnProperty(t.category)) counts[t.category]++; }
 
-            let visible = store.filter === 'archive' ? t.completed : (!t.completed && (store.filter === 'all' || store.filter === t.category));
+            // 过滤判断
+            let visible = false;
+            if(store.filter === 'archive') visible = t.completed;
+            else visible = !t.completed && (store.filter === 'all' || store.filter === t.category);
+
             if(!visible) return;
 
+            // 渲染时间标签
             let dateHTML = '';
             if(t.deadline && !t.completed) {
                 const d = new Date(t.deadline);
                 const diff = d - now;
-
-                // 1. 显示具体日期
                 const dateText = `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
                 
-                // 2. 剩余时间 & 颜色计算
-                let remainText = '';
-                let remainStyle = '';
-
-                if(diff < 0) {
-                    remainText = '已逾期';
-                    remainStyle = 'background:var(--danger); color:#fff;';
-                } else if(diff < 3600000) { // < 1小时
-                    const mins = Math.ceil(diff / 60000);
-                    remainText = `剩${mins}分`;
-                    remainStyle = 'background:var(--danger); color:#fff;';
-                } else if(diff < 86400000) { // < 24小时
-                    const hours = Math.ceil(diff / 3600000);
-                    remainText = `剩${hours}小时`;
-                    remainStyle = 'background:var(--warn); color:#fff;';
-                } else {
-                    const days = Math.ceil(diff / 86400000);
-                    remainText = `剩${days}天`;
-                    // 3天内显示橙色字警告，3天以上显示蓝色/灰色
+                let remainText = '', remainStyle = '';
+                if(diff < 0) { remainText = '已逾期'; remainStyle = 'background:var(--danger); color:#fff;'; }
+                else if(diff < 3600000) { remainText = `剩${Math.ceil(diff/60000)}分`; remainStyle = 'background:var(--danger); color:#fff;'; }
+                else if(diff < 86400000) { remainText = `剩${Math.ceil(diff/3600000)}小时`; remainStyle = 'background:var(--warn); color:#fff;'; }
+                else { 
+                    const days = Math.ceil(diff/86400000); remainText = `剩${days}天`; 
                     if(days <= 3) remainStyle = 'background:rgba(255,149,0,0.15); color:var(--warn);';
                     else remainStyle = 'background:rgba(0,122,255,0.1); color:var(--primary);';
                 }
-
                 dateHTML = `<span class="tg">${dateText}</span><span class="tg" style="${remainStyle}">${remainText}</span>`;
             }
 
             const catMap = { work:'投资', life:'生活', health:'健康' };
-            const btns = store.filter === 'archive'
+            const btns = t.completed
                 ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-undo"></i></button>
                    <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash-alt"></i></button>`
                 : `<button class="icon-btn edit" onclick="editTask(${t.id})"><i class="fas fa-pen"></i></button>
                    <button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-check-circle"></i></button>
                    <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`;
 
-            const html = `
+            listHTML.push(`
                 <li class="task">
                     <div class="t-body">
                         <div class="t-txt">${t.title.replace(/</g,'&lt;')}</div>
                         ${t.notes ? `<div class="t-sub">${t.notes.replace(/</g,'&lt;')}</div>`:''}
-                        <div class="t-tags"><span class="tg">${catMap[t.category]}</span>${dateHTML}</div>
-                        ${store.filter==='archive' ? `<div class="t-sub" style="font-size:10px">归档于 ${formatDate(t.completedAt)}</div>`:''}
+                        <div class="t-tags"><span class="tg">${catMap[t.category]||'其他'}</span>${dateHTML}</div>
+                        ${t.completed ? `<div class="t-sub" style="font-size:10px">归档于 ${formatDate(t.completedAt)}</div>`:''}
                     </div>
                     <div class="t-act">${btns}</div>
-                </li>`;
-            
-            if(store.filter==='archive') buckets.arch.push(html);
-            else if(t.urgent && t.important) buckets.q1.push(html);
-            else if(!t.urgent && t.important) buckets.q2.push(html);
-            else if(t.urgent && !t.important) buckets.q3.push(html);
-            else buckets.q4.push(html);
+                </li>
+            `);
         });
 
-        const setH = (id, h) => document.getElementById(id).innerHTML = h.length ? h.join('') : '<li style="text-align:center;color:#eee;font-size:12px;padding:10px;">空</li>';
-        setH('list-q1', buckets.q1); setH('list-q2', buckets.q2);
-        setH('list-q3', buckets.q3); setH('list-q4', buckets.q4);
-        setH('list-arch', buckets.arch);
+        // 渲染列表
+        document.getElementById('mainList').innerHTML = listHTML.length ? listHTML.join('') : '<div class="empty-state">暂无相关事项</div>';
 
+        // 更新标签状态
         document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
         document.getElementById('tab-'+store.filter).classList.add('active');
         Object.keys(counts).forEach(k => { const el=document.getElementById('c-'+k); if(el) el.innerText = counts[k]; });
 
+        // 标题与功能按钮状态
+        const titles = { all:'所有待办', work:'投资事项', life:'生活杂事', health:'健康管理', archive:'归档记录' };
+        document.getElementById('viewTitle').innerText = titles[store.filter];
+        
         const isArch = store.filter === 'archive';
-        document.getElementById('matrixView').style.display = isArch ? 'none' : 'grid';
-        document.getElementById('archiveView').style.display = isArch ? 'block' : 'none';
+        document.getElementById('clearBtn').style.display = isArch ? 'block' : 'none';
         document.querySelector('.entry-section').style.display = isArch ? 'none' : 'flex';
     }
 
