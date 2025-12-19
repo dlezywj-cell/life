@@ -117,7 +117,20 @@
         
         .t-body { flex: 1; min-width: 0; }
         .t-txt { font-size: 15px; font-weight: 500; color: var(--text-main); line-height: 1.4; margin-bottom: 2px;}
-        .t-sub { font-size: 13px; color: var(--text-sec); margin-top: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        
+        /* 核心修改：备注样式恢复，支持点击展开 */
+        .t-sub { 
+            font-size: 13px; color: var(--text-sec); margin-top: 2px;
+            display: -webkit-box;
+            -webkit-line-clamp: 1; /* 默认显示1行 */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            cursor: pointer; 
+            line-height: 1.4;
+            transition: all 0.2s;
+        }
+        .t-sub.expanded { -webkit-line-clamp: unset; overflow: visible; }
+        
         .t-tags { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .tg { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f2f2f7; color: var(--text-sec); font-weight: 500; }
         
@@ -384,7 +397,6 @@
                 dateHTML = `<span class="tg">${dateText}</span><span class="tg" style="${remainStyle}">${remainText}</span>`;
             }
 
-            // 复盘用的时间显示逻辑（仅归档显示）
             let metaHTML = '';
             if(t.completed) {
                 metaHTML = `
@@ -402,11 +414,12 @@
                    <button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-check-circle"></i></button>
                    <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`;
 
+            // 恢复点击展开功能
             listHTML.push(`
                 <li class="task">
                     <div class="t-body">
                         <div class="t-txt">${t.title.replace(/</g,'&lt;')}</div>
-                        ${t.notes ? `<div class="t-sub">${t.notes.replace(/</g,'&lt;')}</div>`:''}
+                        ${t.notes ? `<div class="t-sub" onclick="this.classList.toggle('expanded')" title="点击展开/折叠">${t.notes.replace(/</g,'&lt;')}</div>`:''}
                         <div class="t-tags"><span class="tg">${catMap[t.category]||'其他'}</span>${dateHTML}</div>
                         ${metaHTML}
                     </div>
