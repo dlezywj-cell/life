@@ -49,7 +49,7 @@
         .sync-dot.error { background: var(--danger); }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        /* 2. 录入区域 (Entry Section) - 放在过滤器上方 */
+        /* 2. 录入区域 (Entry Section) */
         .entry-section {
             background: var(--bg);
             flex-shrink: 0;
@@ -81,7 +81,7 @@
         }
         .input-panel.show {
             max-height: 400px; opacity: 1;
-            margin-top: 10px; margin-bottom: 5px; /* 展开时的间距 */
+            margin-top: 10px; margin-bottom: 5px; 
         }
         
         .input-box {
@@ -95,28 +95,56 @@
         .inp-title { width: 100%; border: none; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 10px; background: transparent; padding-right: 20px; }
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; outline: none; resize: none; height: 24px; color: var(--text-sec); margin-bottom: 12px; background: transparent; font-family: inherit; }
         
-        /* 强制同行显示的 CSS 魔法 */
-        .inp-row { 
-            display: flex; align-items: center; gap: 8px; margin-bottom: 12px; 
-            width: 100%; flex-wrap: nowrap; /* 禁止换行 */
+        /* --- 核心修改：单行工具栏布局 --- */
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* 两端对齐：左边日期，右边分类 */
+            flex-wrap: wrap; /* 小屏幕允许换行，防止布局崩溃 */
+            gap: 12px;
+            margin-top: 4px;
         }
+
+        /* 左侧组：日期 + Checkbox */
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
         .date-inp { 
-            flex: 1; /* 自动占据剩余宽度 */
-            min-width: 0; /* 允许在小屏下压缩宽度 */
             background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 8px; 
             font-size: 12px; color: var(--primary); font-family: inherit;
+            max-width: 125px; /* 限制宽度，更加紧凑 */
         }
-        .check-group {
-            flex-shrink: 0; /* 禁止复选框组被压缩 */
-            display: flex; gap: 8px;
-        }
+
+        .check-group { display: flex; gap: 10px; flex-shrink: 0; }
         .check-lbl { font-size: 13px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
-        
-        .tag-row { display: flex; justify-content: space-between; align-items: center; }
-        .cats { display: flex; gap: 8px; }
-        .cat-chip { font-size: 12px; padding: 5px 12px; background: #f2f2f7; color: var(--text-sec); border-radius: 14px; cursor: pointer; font-weight: 500; }
+
+        /* 右侧组：分类 + 按钮 */
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto; /* 强制靠右 */
+        }
+
+        .cats { display: flex; gap: 6px; }
+        .cat-chip { 
+            font-size: 12px; padding: 5px 10px; 
+            background: #f2f2f7; color: var(--text-sec); 
+            border-radius: 14px; cursor: pointer; font-weight: 500; white-space: nowrap;
+        }
         .cat-chip.selected { background: var(--text-main); color: #fff; }
-        .btn-add { background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.3); display: flex; align-items: center; justify-content: center; }
+
+        .btn-add { 
+            background: var(--primary); color: white; border: none; 
+            width: 32px; height: 32px; border-radius: 50%; 
+            font-size: 14px; cursor: pointer; flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,122,255,0.3); 
+            display: flex; align-items: center; justify-content: center; 
+        }
         .btn-add.update-mode { background: var(--info); box-shadow: 0 4px 10px rgba(88, 86, 214, 0.3); }
 
         /* 3. 过滤器 Tabs */
@@ -192,23 +220,28 @@
             <input type="text" id="newTitle" class="inp-title" placeholder="要做什么？">
             <textarea id="newNote" class="inp-note" placeholder="备注..."></textarea>
             
-            <!-- 强制同行显示 -->
-            <div class="inp-row">
-                <input type="datetime-local" id="newDate" class="date-inp">
-                <div class="check-group">
-                    <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急🔥</label>
-                    <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要⭐</label>
+            <!-- 整合后的单行工具栏 -->
+            <div class="input-toolbar">
+                <!-- 左侧：日期 + 紧跟的 Checkbox -->
+                <div class="toolbar-left">
+                    <input type="datetime-local" id="newDate" class="date-inp">
+                    <div class="check-group">
+                        <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急🔥</label>
+                        <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要⭐</label>
+                    </div>
+                </div>
+
+                <!-- 右侧：分类 + 提交按钮 -->
+                <div class="toolbar-right">
+                    <div class="cats">
+                        <div class="cat-chip selected" onclick="setInpCat('work')" id="chip-work">💼 投资</div>
+                        <div class="cat-chip" onclick="setInpCat('life')" id="chip-life">🏠 生活</div>
+                        <div class="cat-chip" onclick="setInpCat('health')" id="chip-health">❤️ 健康</div>
+                    </div>
+                    <button class="btn-add" id="actionBtn" onclick="addTask()"><i class="fas fa-arrow-up"></i></button>
                 </div>
             </div>
-            
-            <div class="tag-row">
-                <div class="cats">
-                    <div class="cat-chip selected" onclick="setInpCat('work')" id="chip-work">💼 投资</div>
-                    <div class="cat-chip" onclick="setInpCat('life')" id="chip-life">🏠 生活</div>
-                    <div class="cat-chip" onclick="setInpCat('health')" id="chip-health">❤️ 健康</div>
-                </div>
-                <button class="btn-add" id="actionBtn" onclick="addTask()"><i class="fas fa-arrow-up"></i></button>
-            </div>
+
         </div>
     </div>
 </div>
@@ -486,7 +519,7 @@
         document.getElementById('matrixView').style.display = isArch ? 'none' : 'grid';
         document.getElementById('archiveView').style.display = isArch ? 'block' : 'none';
         
-        // 归档模式下，强制隐藏新建按钮 (可选，根据个人喜好，这里我保留了隐藏逻辑)
+        // 归档模式下，强制隐藏新建按钮
         document.querySelector('.entry-section').style.display = isArch ? 'none' : 'flex';
     }
 
