@@ -89,10 +89,7 @@
         .inp-title { width: 100%; border: none; font-size: 18px; font-weight: 600; outline: none; margin-bottom: 12px; background: transparent; font-family: inherit; }
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #f0f0f0; font-size: 14px; outline: none; resize: none; height: 28px; color: var(--text-sec); margin-bottom: 16px; font-family: inherit; background: transparent; }
         .inp-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-        
-        /* 修改点1：调整日期输入框样式以适配 datetime-local */
         .date-inp { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--primary); font-weight: 500; font-family: inherit; min-width: 130px;}
-        
         .check-lbl { font-size: 14px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
         
         .tag-row { display: flex; justify-content: space-between; align-items: center; }
@@ -113,55 +110,65 @@
         .panel::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
         .p-head { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-        /* 列表项 */
-        /* 修改点4：增加最大高度和滚动条，大约显示5个项目 */
         .panel ul { 
             list-style: none; padding: 0; margin: 0; 
-            max-height: 320px; /* 大约5个任务的高度 */
+            max-height: 320px; 
             overflow-y: auto;
-            scrollbar-width: thin; /* Firefox */
+            scrollbar-width: thin; 
         }
-        /* 美化滚动条 (Webkit) */
         .panel ul::-webkit-scrollbar { width: 4px; }
         .panel ul::-webkit-scrollbar-track { background: transparent; }
         .panel ul::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 4px; }
 
-        .task { padding: 12px 0; border-bottom: 1px solid #f5f5f7; display: flex; gap: 12px; animation: fadeIn 0.3s ease; }
+        /* 列表项 - 修改后的布局 */
+        .task { 
+            padding: 10px 0; /* 减少垂直间距，更紧凑 */
+            border-bottom: 1px solid #f5f5f7; 
+            display: flex; 
+            gap: 8px; /* 减少左右间距 */
+            align-items: flex-start; /* 顶部对齐，防止按钮组撑高 */
+            animation: fadeIn 0.3s ease; 
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .task:last-child { border-bottom: none; }
         
-        .t-body { flex: 1; min-width: 0; /* 防止文本溢出撑开布局 */ }
-        .t-txt { font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--text-main); }
+        .t-body { flex: 1; min-width: 0; }
+        .t-txt { font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--text-main); margin-right: 4px; }
         
-        /* 修改点2：备注折叠样式 */
         .t-sub { 
             font-size: 13px; color: var(--text-sec); margin-top: 4px; 
             display: -webkit-box;
-            -webkit-line-clamp: 2; /* 默认显示2行 */
+            -webkit-line-clamp: 2; 
             -webkit-box-orient: vertical;
             overflow: hidden;
-            cursor: pointer; /* 提示可点击 */
+            cursor: pointer; 
             transition: all 0.3s;
-            position: relative;
         }
-        /* 展开状态的样式类 */
-        .t-sub.expanded {
-            -webkit-line-clamp: unset;
-        }
-        /* 增加一个微小的提示符，表示可以点击（可选，这里用title提示即可） */
+        .t-sub.expanded { -webkit-line-clamp: unset; }
         
         .t-tags { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .tg { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f2f2f7; color: var(--text-sec); font-weight: 500; }
         .tg.due { color: #fff; background: var(--danger); }
         .tg.due-warn { color: #fff; background: var(--warn); }
         
-        .t-act { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-        .icon-btn { border: none; background: transparent; color: #d1d1d6; font-size: 18px; cursor: pointer; padding: 6px; }
+        /* 按钮组 - 改为横排右上 */
+        .t-act { 
+            display: flex; 
+            flex-direction: row; /* 关键修改：横向排列 */
+            gap: 2px; /* 按钮紧凑 */
+            margin-top: -2px; /* 视觉微调，与标题第一行对齐 */
+        }
+        .icon-btn { 
+            border: none; background: transparent; color: #d1d1d6; 
+            font-size: 16px; /* 稍微调小以适应横排 */
+            cursor: pointer; 
+            padding: 5px; /* 减小点击内边距 */
+        }
         .icon-btn.ok:hover { color: var(--success); }
         .icon-btn.del:hover { color: var(--danger); }
         .icon-btn.edit:hover { color: var(--info); }
 
-        /* 归档元数据美化 */
+        /* 归档元数据 */
         .date-meta { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
         .meta-row { font-size: 11px; color: #aaa; display: flex; align-items: center; gap: 5px; }
 
@@ -203,7 +210,6 @@
         <input type="text" id="newTitle" class="inp-title" placeholder="添加新事项...">
         <textarea id="newNote" class="inp-note" placeholder="备注 (可选)"></textarea>
         <div class="inp-row">
-            <!-- 修改点1：类型改为 datetime-local -->
             <input type="datetime-local" id="newDate" class="date-inp">
             <label class="check-lbl"><input type="checkbox" id="isUrgent"> 紧急 🔥</label>
             <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要 ⭐</label>
@@ -413,12 +419,8 @@
         document.getElementById('newTitle').value = t.title;
         document.getElementById('newNote').value = t.notes || '';
         
-        // 修正编辑回填时间格式，适配 datetime-local (yyyy-MM-ddThh:mm)
-        // 如果存储的是完整的ISO，通常是 '2023-12-19T10:00:00.000Z'，需要截取或转换
-        // 如果没有T，则为旧数据日期，补全T00:00
         let dateVal = t.deadline || '';
         if(dateVal && dateVal.length > 16) {
-             // 尝试解析并转为当地时间字符串给 input 使用
              const d = new Date(dateVal);
              const offset = d.getTimezoneOffset() * 60000;
              const localISOTime = (new Date(d - offset)).toISOString().slice(0, 16);
@@ -445,10 +447,7 @@
         const title = document.getElementById('newTitle').value.trim();
         if(!title) return alert('请输入内容');
 
-        // 获取日期，格式为 yyyy-MM-ddThh:mm
         const dateInput = document.getElementById('newDate').value;
-        // 存入数据时，最好是完整的 ISO 格式，但为了简单兼容 input 显示，直接存入带T的字符串也可以，
-        // 或者 new Date(dateInput).toISOString()。这里保持字符串方便 input 回填。
         
         if (store.editingId) {
             const t = store.tasks.find(x => x.id == store.editingId);
@@ -529,20 +528,15 @@
     function render() {
         const buckets = { q1: [], q2: [], q3: [], q4: [], arch: [] };
         const counts = { all: 0, work: 0, life: 0, health: 0, archive: 0 };
-        const now = Date.now(); // 使用精确时间戳
+        const now = Date.now();
 
-        // 修改点3：排序逻辑
-        // 规则：未完成任务按截止日期由近及远排序。无截止日期的排在最后。
         const sortedTasks = [...store.tasks].sort((a, b) => {
             if(a.completed !== b.completed) return a.completed ? 1 : -1;
-            // 都有截止日期 -> 比较日期
             if(a.deadline && b.deadline) {
                 return new Date(a.deadline) - new Date(b.deadline);
             }
-            // 只有一个有 -> 有日期的排前
             if(a.deadline) return -1;
             if(b.deadline) return 1;
-            // 都没有 -> 按 ID (创建时间) 倒序，新的在前面 (或者顺序，看习惯，这里保留默认顺序)
             return b.id - a.id; 
         });
 
@@ -559,7 +553,6 @@
 
             if(!visible) return;
 
-            // 修改点1：倒计时精确计算
             let dateTag = '';
             if(t.deadline && !t.completed) {
                 const dueTime = new Date(t.deadline).getTime();
@@ -567,21 +560,16 @@
                 const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
                 
                 if (diffMs < 0) {
-                     // 逾期
-                     // 计算逾期天数，如果是今天刚过，显示小时
                      const absMs = Math.abs(diffMs);
                      if(absMs < 86400000) dateTag = `<span class="tg due">已过 ${Math.floor(absMs/3600000)} 小时</span>`;
                      else dateTag = `<span class="tg due">逾期 ${Math.floor(absMs/86400000)} 天</span>`;
                 } else if (diffMs < 3600000) {
-                    // 小于1小时
                     const mins = Math.ceil(diffMs / 60000);
                     dateTag = `<span class="tg due-warn">剩余 ${mins} 分钟</span>`;
                 } else if (diffMs < 86400000) {
-                    // 小于24小时
                     const hours = Math.ceil(diffMs / 3600000);
                     dateTag = `<span class="tg due-warn">剩余 ${hours} 小时</span>`;
                 } else {
-                    // 天数
                     if(diffDays <= 3) dateTag = `<span class="tg due-warn">${diffDays} 天后</span>`;
                     else dateTag = `<span class="tg">${diffDays} 天后</span>`;
                 }
@@ -604,8 +592,6 @@
                 </div>`;
             }
 
-            // 修改点2：备注折叠交互
-            // 添加 onclick 事件来切换 class
             const html = `
                 <li class="task">
                     <div class="t-body">
