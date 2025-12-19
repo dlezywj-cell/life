@@ -95,40 +95,28 @@
         .inp-title { width: 100%; border: none; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 10px; background: transparent; padding-right: 20px; }
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; outline: none; resize: none; height: 24px; color: var(--text-sec); margin-bottom: 12px; background: transparent; font-family: inherit; }
         
-        /* --- 核心修改：单行工具栏布局 --- */
+        /* 单行工具栏布局 */
         .input-toolbar {
             display: flex;
             align-items: center;
-            justify-content: space-between; /* 两端对齐：左边日期，右边分类 */
-            flex-wrap: wrap; /* 小屏幕允许换行，防止布局崩溃 */
+            justify-content: space-between; 
+            flex-wrap: wrap; 
             gap: 12px;
             margin-top: 4px;
         }
 
-        /* 左侧组：日期 + Checkbox */
-        .toolbar-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-shrink: 0;
-        }
+        .toolbar-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 
         .date-inp { 
             background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 8px; 
             font-size: 12px; color: var(--primary); font-family: inherit;
-            max-width: 125px; /* 限制宽度，更加紧凑 */
+            max-width: 125px; 
         }
 
         .check-group { display: flex; gap: 10px; flex-shrink: 0; }
         .check-lbl { font-size: 13px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
 
-        /* 右侧组：分类 + 按钮 */
-        .toolbar-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-left: auto; /* 强制靠右 */
-        }
+        .toolbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 
         .cats { display: flex; gap: 6px; }
         .cat-chip { 
@@ -179,7 +167,8 @@
         .t-sub { font-size: 12px; color: var(--text-sec); margin-top: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .t-tags { margin-top: 4px; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
         .tg { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #f2f2f7; color: var(--text-sec); }
-        .tg.due { color: #fff; background: var(--danger); }
+        
+        /* 动态样式将在 JS 中控制 */
         
         .t-act { display: flex; gap: 4px; margin-top: -2px; }
         .icon-btn { border: none; background: transparent; color: #d1d1d6; font-size: 16px; cursor: pointer; padding: 4px; transition: color 0.2s; }
@@ -205,24 +194,18 @@
     </div>
 </header>
 
-<!-- 录入界面：放在 Tabs 上方，且不在 Main 滚动区内 -->
 <div class="entry-section">
-    <!-- 展开条 -->
     <div class="toggle-bar" id="toggleBar" onclick="toggleInput(true)">
         <i class="fas fa-plus-circle"></i> 录入 / 新建事项
     </div>
 
-    <!-- 录入面板 -->
     <div class="input-panel" id="inputPanel">
         <div class="input-box" id="inputBox">
             <i class="fas fa-times close-btn" onclick="toggleInput(false)"></i>
-            
             <input type="text" id="newTitle" class="inp-title" placeholder="要做什么？">
             <textarea id="newNote" class="inp-note" placeholder="备注..."></textarea>
             
-            <!-- 整合后的单行工具栏 -->
             <div class="input-toolbar">
-                <!-- 左侧：日期 + 紧跟的 Checkbox -->
                 <div class="toolbar-left">
                     <input type="datetime-local" id="newDate" class="date-inp">
                     <div class="check-group">
@@ -230,8 +213,6 @@
                         <label class="check-lbl"><input type="checkbox" id="isImp" checked> 重要⭐</label>
                     </div>
                 </div>
-
-                <!-- 右侧：分类 + 提交按钮 -->
                 <div class="toolbar-right">
                     <div class="cats">
                         <div class="cat-chip selected" onclick="setInpCat('work')" id="chip-work">💼 投资</div>
@@ -241,7 +222,6 @@
                     <button class="btn-add" id="actionBtn" onclick="addTask()"><i class="fas fa-arrow-up"></i></button>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -289,7 +269,6 @@
     </div>
 </div>
 
-<!-- 设置弹窗 -->
 <div class="modal" id="settingModal">
     <div class="modal-box">
         <h3 style="margin:0 0 15px 0; text-align:center;">GitHub 同步</h3>
@@ -313,7 +292,6 @@
         filter: 'all', inputCat: 'work', editingId: null, syncTimer: null
     };
 
-    // 辅助函数
     function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
     function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
     function preventHoverSticky() {
@@ -326,15 +304,12 @@
         return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
     }
 
-    // --- 界面交互 ---
     function toggleInput(show) {
         const panel = document.getElementById('inputPanel');
         const bar = document.getElementById('toggleBar');
-        
         if (show) {
             bar.classList.add('hidden');
             panel.classList.add('show');
-            // 只有新建时才聚焦，避免手机键盘乱跳
             if(!store.editingId) setTimeout(() => document.getElementById('newTitle').focus(), 100);
         } else {
             bar.classList.remove('hidden');
@@ -353,7 +328,6 @@
         document.getElementById('inputBox').classList.remove('editing');
     }
 
-    // --- 数据操作 ---
     function addTask() {
         const title = document.getElementById('newTitle').value.trim();
         if(!title) return alert('请输入标题');
@@ -371,7 +345,7 @@
             const t = store.tasks.find(x => x.id == store.editingId);
             if(t) Object.assign(t, taskData);
             resetInput();
-            toggleInput(false); // 修改完自动收起
+            toggleInput(false);
         } else {
             store.tasks.push({
                 ...taskData,
@@ -380,7 +354,6 @@
                 createdAt: new Date().toISOString(),
                 completedAt: null
             });
-            // 新建完清空标题，方便连续录入，不收起
             document.getElementById('newTitle').value = '';
             document.getElementById('newNote').value = '';
             document.getElementById('newTitle').focus();
@@ -391,12 +364,9 @@
     window.editTask = function(id) {
         const t = store.tasks.find(x => x.id == id);
         if(!t) return;
-        
-        toggleInput(true); // 强制展开
+        toggleInput(true);
         document.getElementById('newTitle').value = t.title;
         document.getElementById('newNote').value = t.notes || '';
-        
-        // 处理时区问题，让 input datetime-local 显示正确时间
         let dateVal = t.deadline || '';
         if(dateVal && dateVal.length > 16) {
              const d = new Date(dateVal);
@@ -404,12 +374,10 @@
              dateVal = (new Date(d - offset)).toISOString().slice(0, 16);
         }
         document.getElementById('newDate').value = dateVal;
-        
         document.getElementById('isUrgent').checked = t.urgent;
         document.getElementById('isImp').checked = t.important;
         setInpCat(t.category);
         store.editingId = id;
-        
         document.getElementById('actionBtn').innerHTML = '<i class="fas fa-check"></i>';
         document.getElementById('actionBtn').classList.add('update-mode');
         document.getElementById('inputBox').classList.add('editing');
@@ -443,17 +411,14 @@
     window.setFilter = f => {
         store.filter = f;
         render();
-        // 如果是归档模式，自动收起录入框
         if(f === 'archive') toggleInput(false);
     };
 
-    // --- 渲染逻辑 ---
     function render() {
         const buckets = { q1:[], q2:[], q3:[], q4:[], arch:[] };
         const counts = { all:0, work:0, life:0, health:0, archive:0 };
         const now = Date.now();
         
-        // 排序：未完成按时间/ID，已完成按归档时间
         const list = [...store.tasks].sort((a,b) => {
             if(a.completed !== b.completed) return a.completed ? 1 : -1;
             if(a.completed) return new Date(b.completedAt) - new Date(a.completedAt);
@@ -466,21 +431,44 @@
             if(t.completed) counts.archive++;
             else { counts.all++; if(counts.hasOwnProperty(t.category)) counts[t.category]++; }
 
-            // 过滤显示
             let visible = store.filter === 'archive' ? t.completed : (!t.completed && (store.filter === 'all' || store.filter === t.category));
             if(!visible) return;
 
             let dateHTML = '';
             if(t.deadline && !t.completed) {
-                const diff = new Date(t.deadline) - now;
-                const days = Math.ceil(diff/86400000);
-                if(diff < 0) dateHTML = `<span class="tg due">逾期</span>`;
-                else if(diff < 3600000) dateHTML = `<span class="tg due" style="background:var(--warn)">马上</span>`;
-                else if(days <= 2) dateHTML = `<span class="tg" style="color:var(--warn)">${days}天后</span>`;
-                else dateHTML = `<span class="tg">${formatDate(t.deadline).split(' ')[0]}</span>`;
-            }
-            const catMap = { work:'投资', life:'生活', health:'健康' };
+                const d = new Date(t.deadline);
+                const diff = d - now;
 
+                // 1. 显示具体日期
+                const dateText = `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+                
+                // 2. 剩余时间 & 颜色计算
+                let remainText = '';
+                let remainStyle = '';
+
+                if(diff < 0) {
+                    remainText = '已逾期';
+                    remainStyle = 'background:var(--danger); color:#fff;';
+                } else if(diff < 3600000) { // < 1小时
+                    const mins = Math.ceil(diff / 60000);
+                    remainText = `剩${mins}分`;
+                    remainStyle = 'background:var(--danger); color:#fff;';
+                } else if(diff < 86400000) { // < 24小时
+                    const hours = Math.ceil(diff / 3600000);
+                    remainText = `剩${hours}小时`;
+                    remainStyle = 'background:var(--warn); color:#fff;';
+                } else {
+                    const days = Math.ceil(diff / 86400000);
+                    remainText = `剩${days}天`;
+                    // 3天内显示橙色字警告，3天以上显示蓝色/灰色
+                    if(days <= 3) remainStyle = 'background:rgba(255,149,0,0.15); color:var(--warn);';
+                    else remainStyle = 'background:rgba(0,122,255,0.1); color:var(--primary);';
+                }
+
+                dateHTML = `<span class="tg">${dateText}</span><span class="tg" style="${remainStyle}">${remainText}</span>`;
+            }
+
+            const catMap = { work:'投资', life:'生活', health:'健康' };
             const btns = store.filter === 'archive'
                 ? `<button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-undo"></i></button>
                    <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash-alt"></i></button>`
@@ -518,12 +506,9 @@
         const isArch = store.filter === 'archive';
         document.getElementById('matrixView').style.display = isArch ? 'none' : 'grid';
         document.getElementById('archiveView').style.display = isArch ? 'block' : 'none';
-        
-        // 归档模式下，强制隐藏新建按钮
         document.querySelector('.entry-section').style.display = isArch ? 'none' : 'flex';
     }
 
-    // --- 同步逻辑 (保持不变) ---
     function updateStatus(s,t) { 
         document.getElementById('syncDot').className = 'sync-dot '+s; 
         document.getElementById('statusTxt').innerText = t||(s==='syncing'?'同步中':'在线'); 
@@ -563,7 +548,6 @@
     }
     function saveAndSync() { saveLocal(true); }
 
-    // 设置相关
     window.showSettings = () => document.getElementById('settingModal').style.display = 'flex';
     window.closeSettings = () => document.getElementById('settingModal').style.display = 'none';
     window.saveConfig = () => {
@@ -576,12 +560,10 @@
         closeSettings(); autoSyncFromCloud();
     };
     
-    // 初始化输入框值
     document.getElementById('cfgToken').value = store.config.token;
     document.getElementById('cfgUser').value = store.config.user;
     document.getElementById('cfgRepo').value = store.config.repo;
 
-    // 启动
     const local = localStorage.getItem('lm_data');
     if(local) store.tasks = JSON.parse(local);
     render();
