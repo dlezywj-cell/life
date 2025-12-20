@@ -87,18 +87,10 @@
         .date-inp { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 2px; font-size: 11px; color: var(--primary); font-family: inherit; width: 95px; text-align: center; }
         .cycle-select { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 4px; font-size: 11px; color: var(--text-sec); font-family: inherit; cursor: pointer; width: 50px; text-align: center; appearance: none; -webkit-appearance: none; }
         
-        /* 电脑端/大屏幕优化：增加宽度 */
+        /* 电脑端/大屏幕优化 */
         @media (min-width: 768px) {
-            .date-inp {
-                width: 220px; /* 电脑端给足宽度 */
-                font-size: 13px;
-                padding: 6px 10px;
-                text-align: left;
-            }
-            .cycle-select {
-                width: 80px; /* 电脑端循环选择器也稍微宽一点 */
-                font-size: 13px;
-            }
+            .date-inp { width: 220px; font-size: 13px; padding: 6px 10px; text-align: left; }
+            .cycle-select { width: 80px; font-size: 13px; }
         }
 
         .toolbar-right { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
@@ -335,8 +327,6 @@
         if (store.editingId) {
             const t = store.tasks.find(x => x.id == store.editingId);
             if(t) Object.assign(t, taskData);
-            resetInput();
-            toggleInput(false);
             msg = '已更新';
         } else {
             store.tasks.push({
@@ -346,14 +336,11 @@
                 createdAt: new Date().toISOString(),
                 completedAt: null
             });
-            document.getElementById('newTitle').value = '';
-            document.getElementById('newNote').value = '';
-            document.getElementById('newTitle').focus();
             msg = '已添加';
         }
         
-        // 显示动画提示
         showToast(msg);
+        toggleInput(false); // 修改：无论新增还是更新，成功后都自动收起面板
         saveAndSync();
     }
 
