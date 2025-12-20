@@ -71,16 +71,80 @@
         .inp-title { width: 100%; border: none; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 10px; background: transparent; padding-right: 20px; }
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; outline: none; resize: none; height: 24px; color: var(--text-sec); margin-bottom: 12px; background: transparent; font-family: inherit; }
         
-        .input-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
-        .toolbar-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-        .date-inp { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 8px; font-size: 12px; color: var(--primary); font-family: inherit; max-width: 125px; }
+        /* --- 修改后的工具栏样式 (开始) --- */
+        .input-toolbar { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            flex-wrap: nowrap; /* 强制不换行 */
+            gap: 6px; 
+            margin-top: 4px; 
+        }
+        
+        .toolbar-left { 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+            flex-shrink: 0; 
+        }
+        
+        .date-inp { 
+            background: #f2f2f7; 
+            border: none; 
+            border-radius: 8px; 
+            padding: 6px 4px; 
+            font-size: 11px; 
+            color: var(--primary); 
+            font-family: inherit; 
+            width: 105px; /* 固定宽度，变窄 */
+            text-align: center;
+        }
+        
         .check-group { display: none; } 
 
-        .toolbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-        .cats { display: flex; gap: 6px; }
-        .cat-chip { font-size: 12px; padding: 5px 10px; background: #f2f2f7; color: var(--text-sec); border-radius: 14px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+        .toolbar-right { 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+            margin-left: auto; 
+            flex-shrink: 0;
+        }
+        
+        .cats { 
+            display: flex; 
+            gap: 4px; 
+        }
+        
+        .cat-chip { 
+            font-size: 11px; /* 字体变小 */
+            padding: 4px 8px; /* 内边距变小 */
+            background: #f2f2f7; 
+            color: var(--text-sec); 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: 500; 
+            white-space: nowrap; 
+        }
+        
         .cat-chip.selected { background: var(--text-main); color: #fff; }
-        .btn-add { background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,122,255,0.3); display: flex; align-items: center; justify-content: center; }
+        
+        .btn-add { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            width: 30px; /* 按钮变小 */
+            height: 30px; 
+            border-radius: 50%; 
+            font-size: 13px; 
+            cursor: pointer; 
+            flex-shrink: 0; 
+            box-shadow: 0 4px 10px rgba(0,122,255,0.3); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        /* --- 修改后的工具栏样式 (结束) --- */
+
         .btn-add.update-mode { background: var(--info); box-shadow: 0 4px 10px rgba(88, 86, 214, 0.3); }
 
         /* Tabs */
