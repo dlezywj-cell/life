@@ -71,12 +71,12 @@
         .inp-title { width: 100%; border: none; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 10px; background: transparent; padding-right: 20px; }
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; outline: none; resize: none; height: 24px; color: var(--text-sec); margin-bottom: 12px; background: transparent; font-family: inherit; }
         
-        /* --- 修改后的工具栏样式 (开始) --- */
+        /* Input Toolbar (Updated for Cycle & Compactness) */
         .input-toolbar { 
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
-            flex-wrap: nowrap; /* 强制不换行 */
+            flex-wrap: nowrap; 
             gap: 6px; 
             margin-top: 4px; 
         }
@@ -84,7 +84,7 @@
         .toolbar-left { 
             display: flex; 
             align-items: center; 
-            gap: 5px; 
+            gap: 4px; 
             flex-shrink: 0; 
         }
         
@@ -92,12 +92,28 @@
             background: #f2f2f7; 
             border: none; 
             border-radius: 8px; 
-            padding: 6px 4px; 
+            padding: 6px 2px; 
             font-size: 11px; 
             color: var(--primary); 
             font-family: inherit; 
-            width: 105px; /* 固定宽度，变窄 */
+            width: 95px; /* 进一步缩窄以容纳循环菜单 */
             text-align: center;
+        }
+
+        /* 循环下拉菜单样式 */
+        .cycle-select {
+            background: #f2f2f7;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 4px;
+            font-size: 11px;
+            color: var(--text-sec);
+            font-family: inherit;
+            cursor: pointer;
+            width: 50px;
+            text-align: center;
+            appearance: none;
+            -webkit-appearance: none;
         }
         
         .check-group { display: none; } 
@@ -105,46 +121,26 @@
         .toolbar-right { 
             display: flex; 
             align-items: center; 
-            gap: 5px; 
+            gap: 4px; 
             margin-left: auto; 
             flex-shrink: 0;
         }
         
-        .cats { 
-            display: flex; 
-            gap: 4px; 
-        }
-        
+        .cats { display: flex; gap: 4px; }
         .cat-chip { 
-            font-size: 11px; /* 字体变小 */
-            padding: 4px 8px; /* 内边距变小 */
-            background: #f2f2f7; 
-            color: var(--text-sec); 
-            border-radius: 12px; 
-            cursor: pointer; 
-            font-weight: 500; 
-            white-space: nowrap; 
+            font-size: 11px; padding: 4px 8px; background: #f2f2f7; 
+            color: var(--text-sec); border-radius: 12px; cursor: pointer; 
+            font-weight: 500; white-space: nowrap; 
         }
-        
         .cat-chip.selected { background: var(--text-main); color: #fff; }
         
         .btn-add { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            width: 30px; /* 按钮变小 */
-            height: 30px; 
-            border-radius: 50%; 
-            font-size: 13px; 
-            cursor: pointer; 
-            flex-shrink: 0; 
+            background: var(--primary); color: white; border: none; 
+            width: 30px; height: 30px; border-radius: 50%; font-size: 13px; 
+            cursor: pointer; flex-shrink: 0; 
             box-shadow: 0 4px 10px rgba(0,122,255,0.3); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+            display: flex; align-items: center; justify-content: center; 
         }
-        /* --- 修改后的工具栏样式 (结束) --- */
-
         .btn-add.update-mode { background: var(--info); box-shadow: 0 4px 10px rgba(88, 86, 214, 0.3); }
 
         /* Tabs */
@@ -181,22 +177,16 @@
         
         .t-body { flex: 1; min-width: 0; }
         .t-txt { font-size: 15px; font-weight: 500; color: var(--text-main); line-height: 1.4; margin-bottom: 2px;}
-        
-        /* 核心修改：备注样式恢复，支持点击展开 */
         .t-sub { 
             font-size: 13px; color: var(--text-sec); margin-top: 2px;
-            display: -webkit-box;
-            -webkit-line-clamp: 1; /* 默认显示1行 */
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            cursor: pointer; 
-            line-height: 1.4;
-            transition: all 0.2s;
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+            cursor: pointer; line-height: 1.4; transition: all 0.2s;
         }
         .t-sub.expanded { -webkit-line-clamp: unset; overflow: visible; }
         
         .t-tags { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-        .tg { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f2f2f7; color: var(--text-sec); font-weight: 500; }
+        .tg { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f2f2f7; color: var(--text-sec); font-weight: 500; display:flex; align-items:center; gap:4px; }
+        .tg.cycle-tag { background: #eef2ff; color: var(--info); }
         
         .t-act { display: flex; gap: 8px; margin-top: 0; align-self: flex-start; }
         .icon-btn { border: none; background: transparent; color: #d1d1d6; font-size: 18px; cursor: pointer; padding: 4px; transition: color 0.2s; }
@@ -238,10 +228,13 @@
             <div class="input-toolbar">
                 <div class="toolbar-left">
                     <input type="datetime-local" id="newDate" class="date-inp">
-                    <div class="check-group" style="display:none;">
-                        <input type="checkbox" id="isUrgent">
-                        <input type="checkbox" id="isImp" checked>
-                    </div>
+                    <!-- 新增循环选择器 -->
+                    <select id="newCycle" class="cycle-select">
+                        <option value="none">一次</option>
+                        <option value="daily">每天</option>
+                        <option value="weekly">每周</option>
+                        <option value="monthly">每月</option>
+                    </select>
                 </div>
                 <div class="toolbar-right">
                     <div class="cats">
@@ -331,6 +324,7 @@
         document.getElementById('newTitle').value = '';
         document.getElementById('newNote').value = '';
         document.getElementById('newDate').value = '';
+        document.getElementById('newCycle').value = 'none'; // 重置循环
         document.getElementById('actionBtn').innerHTML = '<i class="fas fa-arrow-up"></i>';
         document.getElementById('actionBtn').classList.remove('update-mode');
         document.getElementById('inputBox').classList.remove('editing');
@@ -345,6 +339,7 @@
             notes: document.getElementById('newNote').value.trim(),
             category: store.inputCat,
             deadline: document.getElementById('newDate').value,
+            cycle: document.getElementById('newCycle').value, // 读取循环设置
             urgent: false, 
             important: true 
         };
@@ -382,6 +377,7 @@
              dateVal = (new Date(d - offset)).toISOString().slice(0, 16);
         }
         document.getElementById('newDate').value = dateVal;
+        document.getElementById('newCycle').value = t.cycle || 'none'; // 回显循环
         setInpCat(t.category);
         store.editingId = id;
         document.getElementById('actionBtn').innerHTML = '<i class="fas fa-check"></i>';
@@ -389,14 +385,56 @@
         document.getElementById('inputBox').classList.add('editing');
     };
 
+    // 计算下一次日期的辅助函数
+    function getNextDate(currentDateStr, cycle) {
+        if(!currentDateStr) return '';
+        const d = new Date(currentDateStr);
+        if(isNaN(d.getTime())) return '';
+        
+        if(cycle === 'daily') d.setDate(d.getDate() + 1);
+        else if(cycle === 'weekly') d.setDate(d.getDate() + 7);
+        else if(cycle === 'monthly') d.setMonth(d.getMonth() + 1);
+        
+        // 保持 ISO 格式以兼容 datetime-local
+        const offset = d.getTimezoneOffset() * 60000;
+        return (new Date(d - offset)).toISOString().slice(0, 16);
+    }
+
     window.toggleStatus = function(id) {
         preventHoverSticky();
         const t = store.tasks.find(x => x.id == id);
-        if(t) { t.completed = !t.completed; t.completedAt = t.completed ? new Date().toISOString() : null; saveAndSync(); }
+        if(t) { 
+            if(!t.completed && t.cycle && t.cycle !== 'none') {
+                // 如果是完成一个周期任务，自动生成下一个
+                // 1. 生成新任务（基于当前任务信息，推迟时间）
+                const nextDate = getNextDate(t.deadline || new Date().toISOString(), t.cycle);
+                const newTask = {
+                    ...t,
+                    id: Date.now() + Math.floor(Math.random()*1000), // 防止ID冲突
+                    deadline: nextDate,
+                    completed: false,
+                    completedAt: null,
+                    createdAt: new Date().toISOString()
+                };
+                store.tasks.push(newTask);
+            }
+            
+            // 2. 标记当前任务为已完成（归档）
+            t.completed = !t.completed; 
+            t.completedAt = t.completed ? new Date().toISOString() : null; 
+            
+            saveAndSync(); 
+        }
     };
 
     window.removeTask = function(id) {
-        if(confirm('删除此项？')) {
+        const t = store.tasks.find(x => x.id == id);
+        let msg = '删除此项？';
+        if(t && !t.completed && t.cycle && t.cycle !== 'none') {
+            msg = '这是一个周期性任务。删除当前任务将停止后续任务的生成。\n确定删除吗？';
+        }
+        
+        if(confirm(msg)) {
             preventHoverSticky();
             store.tasks = store.tasks.filter(x => x.id != id);
             if(store.editingId == id) { resetInput(); toggleInput(false); }
@@ -433,6 +471,8 @@
             return b.id - a.id;
         });
 
+        const cycleMap = { daily: '每天', weekly: '每周', monthly: '每月' };
+
         sortedList.forEach(t => {
             if(t.completed) counts.archive++;
             else { counts.all++; if(counts.hasOwnProperty(t.category)) counts[t.category]++; }
@@ -444,6 +484,12 @@
             if(!visible) return;
 
             let dateHTML = '';
+            // 循环标志
+            let cycleHTML = '';
+            if(t.cycle && t.cycle !== 'none' && !t.completed) {
+                cycleHTML = `<span class="tg cycle-tag"><i class="fas fa-repeat"></i> ${cycleMap[t.cycle]}</span>`;
+            }
+
             if(t.deadline && !t.completed) {
                 const d = new Date(t.deadline);
                 const diff = d - now;
@@ -478,13 +524,16 @@
                    <button class="icon-btn ok" onclick="toggleStatus(${t.id})"><i class="fas fa-check-circle"></i></button>
                    <button class="icon-btn del" onclick="removeTask(${t.id})"><i class="fas fa-trash"></i></button>`;
 
-            // 恢复点击展开功能
             listHTML.push(`
                 <li class="task">
                     <div class="t-body">
                         <div class="t-txt">${t.title.replace(/</g,'&lt;')}</div>
                         ${t.notes ? `<div class="t-sub" onclick="this.classList.toggle('expanded')" title="点击展开/折叠">${t.notes.replace(/</g,'&lt;')}</div>`:''}
-                        <div class="t-tags"><span class="tg">${catMap[t.category]||'其他'}</span>${dateHTML}</div>
+                        <div class="t-tags">
+                            <span class="tg">${catMap[t.category]||'其他'}</span>
+                            ${cycleHTML}
+                            ${dateHTML}
+                        </div>
                         ${metaHTML}
                     </div>
                     <div class="t-act">${btns}</div>
