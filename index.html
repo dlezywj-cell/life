@@ -82,8 +82,25 @@
         /* Input Toolbar */
         .input-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 6px; margin-top: 4px; }
         .toolbar-left { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        
+        /* 默认样式 (手机端优先) */
         .date-inp { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 2px; font-size: 11px; color: var(--primary); font-family: inherit; width: 95px; text-align: center; }
         .cycle-select { background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 4px; font-size: 11px; color: var(--text-sec); font-family: inherit; cursor: pointer; width: 50px; text-align: center; appearance: none; -webkit-appearance: none; }
+        
+        /* 电脑端/大屏幕优化：增加宽度 */
+        @media (min-width: 768px) {
+            .date-inp {
+                width: 220px; /* 电脑端给足宽度 */
+                font-size: 13px;
+                padding: 6px 10px;
+                text-align: left;
+            }
+            .cycle-select {
+                width: 80px; /* 电脑端循环选择器也稍微宽一点 */
+                font-size: 13px;
+            }
+        }
+
         .toolbar-right { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
         .cats { display: flex; gap: 4px; }
         .cat-chip { font-size: 11px; padding: 4px 8px; background: #f2f2f7; color: var(--text-sec); border-radius: 12px; cursor: pointer; font-weight: 500; white-space: nowrap; }
@@ -132,7 +149,7 @@
         .modal input { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #eee; border-radius: 8px; box-sizing: border-box;}
         .btn-block { width: 100%; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
 
-        /* 新增 Toast 提示框样式 */
+        /* Toast 提示框样式 */
         .toast {
             position: fixed;
             top: 50%; left: 50%;
@@ -234,7 +251,7 @@
     </div>
 </div>
 
-<!-- 新增：Toast 提示容器 -->
+<!-- Toast 提示容器 -->
 <div id="toast" class="toast">
     <i class="fas fa-check-circle"></i>
     <span id="toastMsg">已保存</span>
@@ -264,7 +281,7 @@
         return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
     }
 
-    /* 新增：显示 Toast 提示函数 */
+    /* 显示 Toast 提示函数 */
     function showToast(msg) {
         const t = document.getElementById('toast');
         document.getElementById('toastMsg').innerText = msg;
