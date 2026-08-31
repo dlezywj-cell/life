@@ -237,7 +237,7 @@
         <h3 style="margin:0 0 15px 0; text-align:center;">GitHub 同步</h3>
         <input type="password" id="cfgToken" placeholder="Token (ghp_...)">
         <input type="text" id="cfgUser" placeholder="用户名">
-        <input type="text" id="cfgRepo" placeholder="仓库名">
+        <input type="text" id="cfgRepo" value="lifedata" readonly title="此记事本固定同步到 lifedata 仓库">
         <button class="btn-block" onclick="saveConfig()">保存配置</button>
         <button class="btn-block" onclick="closeSettings()" style="background:transparent; color:#999; margin-top:5px;">关闭</button>
     </div>
@@ -250,16 +250,31 @@
 </div>
 
 <script>
+    const LIFE_STORAGE_KEYS = {
+        token: 'life_gh_token',
+        user: 'life_gh_user',
+        tasks: 'life_lm_data'
+    };
+    const LIFE_DATA_REPO = 'lifedata';
+
     let store = {
         tasks: [],
         config: {
-            token: localStorage.getItem('gh_token') || '',
-            user: localStorage.getItem('gh_user') || '',
-            repo: localStorage.getItem('gh_repo') || '',
+            token: localStorage.getItem(LIFE_STORAGE_KEYS.token) || localStorage.getItem('gh_token') || '',
+            user: localStorage.getItem(LIFE_STORAGE_KEYS.user) || localStorage.getItem('gh_user') || '',
+            repo: LIFE_DATA_REPO,
             file: 'data.json'
         },
         filter: 'all', inputCat: 'work', editingId: null, syncTimer: null
     };
+
+    // 首次升级时沿用原来的账号配置，随后只使用本页面自己的存储空间。
+    if(store.config.token && !localStorage.getItem(LIFE_STORAGE_KEYS.token)) {
+        localStorage.setItem(LIFE_STORAGE_KEYS.token, store.config.token);
+    }
+    if(store.config.user && !localStorage.getItem(LIFE_STORAGE_KEYS.user)) {
+        localStorage.setItem(LIFE_STORAGE_KEYS.user, store.config.user);
+    }
 
     function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
     function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
@@ -546,7 +561,7 @@
         } catch(e){ updateStatus('error','出错'); }
     }
     async function saveLocal(sync) {
-        localStorage.setItem('lm_data', JSON.stringify(store.tasks));
+        localStorage.setItem(LIFE_STORAGE_KEYS.tasks, JSON.stringify(store.tasks));
         render();
         if(sync && store.config.token) {
             clearTimeout(store.syncTimer);
@@ -573,10 +588,9 @@
     window.saveConfig = () => {
         store.config.token = document.getElementById('cfgToken').value;
         store.config.user = document.getElementById('cfgUser').value;
-        store.config.repo = document.getElementById('cfgRepo').value;
-        localStorage.setItem('gh_token', store.config.token);
-        localStorage.setItem('gh_user', store.config.user);
-        localStorage.setItem('gh_repo', store.config.repo);
+        store.config.repo = LIFE_DATA_REPO;
+        localStorage.setItem(LIFE_STORAGE_KEYS.token, store.config.token);
+        localStorage.setItem(LIFE_STORAGE_KEYS.user, store.config.user);
         closeSettings(); autoSyncFromCloud();
     };
     
@@ -584,8 +598,13 @@
     document.getElementById('cfgUser').value = store.config.user;
     document.getElementById('cfgRepo').value = store.config.repo;
 
-    const local = localStorage.getItem('lm_data');
-    if(local) store.tasks = JSON.parse(local);
+    const local = localStorage.getItem(LIFE_STORAGE_KEYS.tasks) || localStorage.getItem('lm_data');
+    if(local) {
+        store.tasks = JSON.parse(local);
+        if(!localStorage.getItem(LIFE_STORAGE_KEYS.tasks)) {
+            localStorage.setItem(LIFE_STORAGE_KEYS.tasks, local);
+        }
+    }
     render();
     if(store.config.token) autoSyncFromCloud();
     else updateStatus('ready','本地');
