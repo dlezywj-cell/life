@@ -68,7 +68,7 @@
             max-height: 0; opacity: 0; overflow: hidden;
             transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease; margin: 0 16px;
         }
-        .input-panel.show { max-height: 400px; opacity: 1; margin-top: 10px; margin-bottom: 5px; }
+        .input-panel.show { max-height: 520px; opacity: 1; margin-top: 10px; margin-bottom: 5px; }
         
         .input-box {
             background: var(--card); padding: 16px; border-radius: var(--radius-l);
@@ -79,10 +79,17 @@
         .inp-title { width: 100%; border: none; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 10px; background: transparent; padding-right: 20px; }
         .inp-note { width: 100%; border: none; border-bottom: 1px solid #eee; font-size: 13px; outline: none; resize: none; height: 24px; color: var(--text-sec); margin-bottom: 12px; background: transparent; font-family: inherit; }
         .smart-entry { display: flex; gap: 8px; margin: 4px 20px 14px 0; }
-        .smart-inp { flex: 1; min-width: 0; border: 1px solid #e5e5ea; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; background: #f9f9fb; font-family: inherit; }
+        .smart-inp { flex: 1; min-width: 0; min-height: 42px; max-height: 130px; resize: vertical; box-sizing: border-box; border: 1px solid #e5e5ea; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; background: #f9f9fb; font-family: inherit; }
         .smart-inp:focus { border-color: var(--primary); background: #fff; }
         .smart-btn { border: none; border-radius: 10px; padding: 0 13px; color: #fff; background: var(--info); font-weight: 600; cursor: pointer; white-space: nowrap; }
         .smart-hint { color: var(--text-sec); font-size: 11px; margin: -8px 20px 12px 2px; line-height: 1.4; }
+        .batch-modal-box { width: min(88%, 520px); max-width: 520px; max-height: 80vh; display: flex; flex-direction: column; }
+        .batch-list { overflow-y: auto; margin: 4px 0 16px; border-top: 1px solid #eee; }
+        .batch-item { padding: 11px 2px; border-bottom: 1px solid #eee; }
+        .batch-title { font-size: 14px; font-weight: 600; line-height: 1.4; }
+        .batch-meta { color: var(--text-sec); font-size: 12px; margin-top: 4px; }
+        .batch-actions { display: flex; gap: 8px; }
+        .batch-actions .btn-block { margin: 0; }
         
         /* Input Toolbar */
         .input-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 6px; margin-top: 4px; }
@@ -190,10 +197,10 @@
         <div class="input-box" id="inputBox">
             <i class="fas fa-times close-btn" onclick="toggleInput(false)"></i>
             <div class="smart-entry">
-                <input type="text" id="smartInput" class="smart-inp" placeholder="例如：明天下午3点提醒我去医院复查">
+                <textarea id="smartInput" class="smart-inp" rows="2" placeholder="单条：明天下午3点提醒我去医院复查&#10;批量：每行输入一个带日期的事项"></textarea>
                 <button class="smart-btn" type="button" onclick="parseSmartInput()">识别</button>
             </div>
-            <div class="smart-hint">支持今天、明天、后天、星期、具体日期和每天/每周/每月；识别后请确认再保存</div>
+            <div class="smart-hint">支持粘贴编号或多行日程；⌘/Ctrl + Enter 识别，确认预览后批量建立</div>
             <input type="text" id="newTitle" class="inp-title" placeholder="要做什么？">
             <textarea id="newNote" class="inp-note" placeholder="备注..."></textarea>
             
@@ -253,6 +260,19 @@
     </div>
 </div>
 
+<!-- 批量识别预览 -->
+<div class="modal" id="batchModal">
+    <div class="modal-box batch-modal-box">
+        <h3 style="margin:0 0 6px; text-align:center;">批量识别预览</h3>
+        <div id="batchSummary" class="smart-hint" style="margin:0 0 10px; text-align:center;"></div>
+        <div id="batchList" class="batch-list"></div>
+        <div class="batch-actions">
+            <button class="btn-block" type="button" onclick="closeBatchPreview()" style="background:#e5e5ea; color:#555;">返回修改</button>
+            <button class="btn-block" type="button" onclick="confirmBatchAdd()">确认添加</button>
+        </div>
+    </div>
+</div>
+
 <!-- Toast 提示容器 -->
 <div id="toast" class="toast">
     <i class="fas fa-check-circle"></i>
@@ -275,7 +295,7 @@
             repo: LIFE_DATA_REPO,
             file: 'data.json'
         },
-        filter: 'all', inputCat: 'work', editingId: null, syncTimer: null
+        filter: 'all', inputCat: 'work', editingId: null, syncTimer: null, pendingBatch: []
     };
 
     // 首次升级时沿用原来的账号配置，随后只使用本页面自己的存储空间。
@@ -429,8 +449,95 @@
         return result;
     }
 
+    function splitBatchLines(rawText) {
+        const prepared = rawText
+            .replace(/\u00a0/g, ' ')
+            .replace(/\s+(?=\d+[.、)]\s*(?:\*\*)?(?:\d{4}年)?\d{1,2}月\d{1,2}日)/g, '\n');
+        const lines = [];
+        prepared.split(/\r?\n/).map(line => line.trim()).filter(Boolean).forEach(line => {
+            const cleaned = line.replace(/^[-*]\s+/, '').replace(/^\d+[.、)]\s*/, '').replace(/\*\*/g, '').trim();
+            if(!cleaned) return;
+            if(!/(?:\d{4}年)?\d{1,2}月\d{1,2}[日号]|今天|明天|后天|(?:下|本|这|每)?(?:周|星期|礼拜)[一二三四五六日天]/.test(cleaned) && lines.length) {
+                lines[lines.length - 1] += ' ' + cleaned;
+            } else {
+                lines.push(cleaned);
+            }
+        });
+        return lines;
+    }
+
+    function parseBatchText(rawText, now = new Date()) {
+        const skipped = [];
+        const tasks = splitBatchLines(rawText).map(line => {
+            const parsed = parseSmartText(line, now);
+            if(!parsed || !parsed.deadline) {
+                skipped.push(line);
+                return null;
+            }
+
+            const placeMatch = line.match(/[｜|]\s*([^：:｜|]+)\s*[：:]/);
+            const detailMatch = line.match(/[：:]\s*(.+)$/);
+            const place = placeMatch ? placeMatch[1].trim() : '';
+            const details = detailMatch ? detailMatch[1].trim() : parsed.title;
+            const concise = details.split(/，(?=(?:了解|重点|主要|聚焦|用于|可用于|考察))/)[0].replace(/，/g, '、').replace(/[。；;]+$/, '');
+            parsed.title = place ? `${place}｜${concise}` : concise;
+            parsed.notes = details;
+            return parsed;
+        }).filter(Boolean);
+        return { tasks, skipped };
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
+    }
+
+    function showBatchPreview(result) {
+        store.pendingBatch = result.tasks;
+        const catMap = { work:'投资', life:'生活', health:'健康' };
+        document.getElementById('batchSummary').innerText = `识别到 ${result.tasks.length} 条${result.skipped.length ? `，跳过 ${result.skipped.length} 条无日期内容` : ''}；未写时间的事项默认为 09:00`;
+        document.getElementById('batchList').innerHTML = result.tasks.map((task, index) => `
+            <div class="batch-item">
+                <div class="batch-title">${index + 1}. ${escapeHtml(task.title)}</div>
+                <div class="batch-meta">${escapeHtml(formatDate(task.deadline))} · ${catMap[task.category] || '其他'}${task.cycle !== 'none' ? ` · ${{daily:'每天',weekly:'每周',monthly:'每月'}[task.cycle]}` : ''}</div>
+            </div>
+        `).join('');
+        document.getElementById('batchModal').style.display = 'flex';
+    }
+
+    window.closeBatchPreview = function() {
+        document.getElementById('batchModal').style.display = 'none';
+        store.pendingBatch = [];
+    };
+
+    window.confirmBatchAdd = function() {
+        if(!store.pendingBatch.length) return closeBatchPreview();
+        const createdAt = new Date().toISOString();
+        const idBase = Date.now();
+        store.pendingBatch.forEach((task, index) => store.tasks.push({
+            ...task,
+            id: idBase + index,
+            completed: false,
+            createdAt,
+            completedAt: null,
+            urgent: false,
+            important: true
+        }));
+        const count = store.pendingBatch.length;
+        document.getElementById('batchModal').style.display = 'none';
+        store.pendingBatch = [];
+        toggleInput(false);
+        showToast(`已添加 ${count} 条事项`);
+        saveAndSync();
+    };
+
     window.parseSmartInput = function() {
         const raw = document.getElementById('smartInput').value;
+        const lines = splitBatchLines(raw);
+        if(lines.length > 1) {
+            const result = parseBatchText(raw);
+            if(!result.tasks.length) return showToast('没有识别到带日期的事项');
+            return showBatchPreview(result);
+        }
         const parsed = parseSmartText(raw);
         if(!parsed) return showToast('请先输入一句话');
         document.getElementById('newTitle').value = parsed.title;
@@ -441,7 +548,7 @@
     };
 
     document.getElementById('smartInput').addEventListener('keydown', event => {
-        if(event.key === 'Enter') {
+        if(event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
             event.preventDefault();
             parseSmartInput();
         }
