@@ -359,6 +359,14 @@
         return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
+    function getCurrentTimezone() {
+        try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
+        } catch(e) {
+            return 'Asia/Shanghai';
+        }
+    }
+
     function chineseNumberToInt(value) {
         if(/^\d+$/.test(value)) return Number(value);
         const digits = { '零':0, '〇':0, '一':1, '二':2, '两':2, '三':3, '四':4, '五':5, '六':6, '七':7, '八':8, '九':9 };
@@ -513,6 +521,7 @@
         if(!store.pendingBatch.length) return closeBatchPreview();
         const createdAt = new Date().toISOString();
         const idBase = Date.now();
+        const timezone = getCurrentTimezone();
         store.pendingBatch.forEach((task, index) => store.tasks.push({
             ...task,
             id: idBase + index,
@@ -520,7 +529,8 @@
             createdAt,
             completedAt: null,
             urgent: false,
-            important: true
+            important: true,
+            timezone
         }));
         const count = store.pendingBatch.length;
         document.getElementById('batchModal').style.display = 'none';
@@ -580,7 +590,8 @@
                 id: Date.now(),
                 completed: false,
                 createdAt: new Date().toISOString(),
-                completedAt: null
+                completedAt: null,
+                timezone: getCurrentTimezone()
             });
             msg = '已添加';
         }
