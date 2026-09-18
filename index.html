@@ -496,20 +496,68 @@
     }
 
     function splitBatchLines(rawText) {
+        const dateSource = '(?:(?:\\d{4}年)?\\d{1,2}月\\d{1,2}[日号]?|今天|明天|后天|(?:下|本|这|每)?(?:周|星期|礼拜)[一二三四五六日天])';
+        const chineseHour = '[零〇一二两三四五六七八九十\\d]{1,3}';
+        const timeSource = `(?:(?:凌晨|早上|上午|中午|下午|傍晚|晚上)\\s*${chineseHour}(?:点|时)(?:${chineseHour}分?|半)?|\\d{1,2}[：:]\\d{2}|${chineseHour}点(?:${chineseHour}分?|半)?)`;
+        const markerRegex = new RegExp(`${dateSource}|${timeSource}`, 'g');
+        const exactDateRegex = new RegExp(`^${dateSource}$`);
+        const numberedBoundaryRegex = new RegExp(`(^|\\s)\\d+[.、)]\\s*(?=(?:${dateSource}|${timeSource}))`, 'g');
         const prepared = rawText
             .replace(/\u00a0/g, ' ')
-            .replace(/\s+(?=\d+[.、)]\s*(?:\*\*)?(?:\d{4}年)?\d{1,2}月\d{1,2}日)/g, '\n');
-        const lines = [];
-        prepared.split(/\r?\n/).map(line => line.trim()).filter(Boolean).forEach(line => {
-            const cleaned = line.replace(/^[-*]\s+/, '').replace(/^\d+[.、)]\s*/, '').replace(/\*\*/g, '').trim();
-            if(!cleaned) return;
-            if(!/(?:\d{4}年)?\d{1,2}月\d{1,2}[日号]|今天|明天|后天|(?:下|本|这|每)?(?:周|星期|礼拜)[一二三四五六日天]/.test(cleaned) && lines.length) {
-                lines[lines.length - 1] += ' ' + cleaned;
-            } else {
-                lines.push(cleaned);
+            .replace(/\r?\n/g, ' ')
+            .replace(numberedBoundaryRegex, '$1')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if(!prepared) return [];
+
+        const parts = [];
+        let segmentStart = 0;
+        let segmentPrefix = '';
+        let activeDates = [];
+        let hasDate = false;
+        let hasTime = false;
+        let match;
+        const pushSegment = end => {
+            const body = prepared.slice(segmentStart, end).trim();
+            const value = `${segmentPrefix ? segmentPrefix + ' ' : ''}${body}`
+                .replace(/^[-*]\s+/, '')
+                .replace(/^\d+[.、)]\s*/, '')
+                .replace(/\*\*/g, '')
+                .trim();
+            if(value) parts.push(value);
+        };
+
+        while((match = markerRegex.exec(prepared))) {
+            const marker = match[0];
+            const isDate = exactDateRegex.test(marker);
+            if(isDate) {
+                if(hasDate && hasTime) {
+                    pushSegment(match.index);
+                    segmentStart = match.index;
+                    segmentPrefix = '';
+                    activeDates = [marker];
+                    hasTime = false;
+                } else {
+                    activeDates.push(marker);
+                }
+                hasDate = true;
+                continue;
             }
-        });
-        return lines;
+
+            if(hasTime) {
+                const before = prepared.slice(Math.max(0, match.index - 8), match.index);
+                const isRangeEnd = /(?:到|至|[-–—~～])\s*$/.test(before);
+                const isDurationDetail = /时间\s*$/.test(before);
+                if(!isRangeEnd && !isDurationDetail) {
+                    pushSegment(match.index);
+                    segmentStart = match.index;
+                    segmentPrefix = activeDates.join(' ');
+                }
+            }
+            hasTime = true;
+        }
+        pushSegment(prepared.length);
+        return parts;
     }
 
     function parseBatchText(rawText, now = new Date()) {
