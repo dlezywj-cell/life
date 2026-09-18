@@ -523,11 +523,15 @@
 
             const placeMatch = line.match(/[｜|]\s*([^：:｜|]+)\s*[：:]/);
             const detailMatch = line.match(/[：:]\s*(.+)$/);
-            const place = placeMatch ? placeMatch[1].trim() : '';
-            const details = detailMatch ? detailMatch[1].trim() : parsed.title;
-            const concise = details.split(/，(?=(?:了解|重点|主要|聚焦|用于|可用于|考察))/)[0].replace(/，/g, '、').replace(/[。；;]+$/, '');
-            parsed.title = place ? `${place}｜${concise}` : concise;
-            parsed.notes = details;
+            if(placeMatch && detailMatch) {
+                const place = placeMatch[1].trim();
+                const details = detailMatch[1].trim();
+                const concise = details.split(/，(?=(?:了解|重点|主要|聚焦|用于|可用于|考察))/)[0].replace(/，/g, '、').replace(/[。；;]+$/, '');
+                parsed.title = `${place}｜${concise}`;
+                parsed.notes = details;
+            } else if(!parsed.notes && detailMatch) {
+                parsed.notes = detailMatch[1].trim();
+            }
             return parsed;
         }).filter(Boolean);
         return { tasks, skipped };
