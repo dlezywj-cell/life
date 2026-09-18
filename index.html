@@ -378,6 +378,41 @@
         return digits[value];
     }
 
+    function extractTaskSummary(rawText, parsedTitle) {
+        const cleaned = parsedTitle
+            .replace(/^(?:(?:周|星期|礼拜)[一二三四五六日天]\s*)+/, '')
+            .trim();
+        const detailMatch = cleaned.match(/\s+(?=(?:\d+[.、)]\s*|参与者\s*[：:]|时长\s*[：:]|备注\s*[：:]))/);
+        if(!detailMatch) return { title: cleaned, notes: '' };
+
+        const detailIndex = detailMatch.index;
+        let place = cleaned.slice(0, detailIndex).trim()
+            .replace(/^(?:去|前往|到)\s*/, '')
+            .replace(/[，,、：:\-]+$/, '')
+            .trim();
+        const rawDetailMatch = rawText.match(/\s+(?=(?:\d+[.、)]\s*|参与者\s*[：:]|时长\s*[：:]|备注\s*[：:]))/);
+        const notes = rawDetailMatch
+            ? rawText.slice(rawDetailMatch.index).trim()
+            : cleaned.slice(detailIndex).trim();
+        const source = `${rawText} ${notes}`;
+        const hasVisit = /参观|参访|考察|overview\s+tour|brief\s+introduction/i.test(source);
+        const hasExchange = /交流|座谈|洽谈|discussion|meeting/i.test(source);
+        let action = '';
+        if(hasVisit && hasExchange) action = '参观交流';
+        else if(hasVisit) action = '参观';
+        else if(hasExchange) action = '交流';
+        else if(/调研|调查研究/.test(source)) action = '调研';
+        else if(/会议|开会/.test(source)) action = '会议';
+
+        if(action) {
+            place = place.replace(/(?:参观|参访|考察|交流|座谈|洽谈|调研|会议|开会)+$/, '').trim();
+        }
+        return {
+            title: action && place ? `${place}｜${action}` : (place || cleaned),
+            notes
+        };
+    }
+
     function parseSmartText(rawText, now = new Date()) {
         let text = rawText.trim().replace(/，/g, ' ').replace(/。/g, ' ');
         if(!text) return null;
@@ -453,6 +488,9 @@
         consume(/提醒(?:我)?|记得|请|帮我|我要|需要|安排|事项|任务/g);
         result.title = text.replace(/\s+/g, ' ').replace(/^[,，、\s]+|[,，、\s]+$/g, '').trim();
         if(!result.title) result.title = rawText.trim();
+        const summary = extractTaskSummary(rawText, result.title);
+        result.title = summary.title;
+        result.notes = summary.notes;
         if(hasDate && !isNaN(date.getTime())) result.deadline = toLocalDateTimeValue(date);
         return result;
     }
@@ -551,6 +589,7 @@
         const parsed = parseSmartText(raw);
         if(!parsed) return showToast('请先输入一句话');
         document.getElementById('newTitle').value = parsed.title;
+        document.getElementById('newNote').value = parsed.notes || '';
         document.getElementById('newDate').value = parsed.deadline;
         document.getElementById('newCycle').value = parsed.cycle;
         setInpCat(parsed.category);
