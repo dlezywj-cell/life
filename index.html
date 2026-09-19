@@ -367,6 +367,54 @@
         }
     }
 
+    function parseDeadlineInTimezone(value, timezone) {
+        if(!value) return null;
+        if(/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) {
+            const absolute = new Date(value);
+            return isNaN(absolute.getTime()) ? null : absolute;
+        }
+        const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+        if(!match) {
+            const fallback = new Date(value);
+            return isNaN(fallback.getTime()) ? null : fallback;
+        }
+        const [, year, month, day, rawHour = '09', rawMinute = '00', rawSecond = '00'] = match;
+        const target = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(rawHour), Number(rawMinute), Number(rawSecond));
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone || getCurrentTimezone(),
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hourCycle: 'h23'
+            });
+            let timestamp = target;
+            for(let i = 0; i < 3; i++) {
+                const parts = Object.fromEntries(formatter.formatToParts(new Date(timestamp)).map(part => [part.type, part.value]));
+                const represented = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+                timestamp += target - represented;
+            }
+            return new Date(timestamp);
+        } catch(e) {
+            const fallback = new Date(value);
+            return isNaN(fallback.getTime()) ? null : fallback;
+        }
+    }
+
+    function getTaskDeadlineDate(task) {
+        return parseDeadlineInTimezone(task.deadline, task.timezone || getCurrentTimezone());
+    }
+
+    function formatTaskDeadline(task) {
+        const local = String(task.deadline || '').match(/^\d{4}-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+        if(local) return `${Number(local[1])}/${Number(local[2])} ${local[3] || '09'}:${local[4] || '00'}`;
+        const deadline = getTaskDeadlineDate(task);
+        if(!deadline) return '';
+        return new Intl.DateTimeFormat('zh-CN', {
+            timeZone: task.timezone || getCurrentTimezone(),
+            month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        }).format(deadline);
+    }
+
     function chineseNumberToInt(value) {
         if(/^\d+$/.test(value)) return Number(value);
         const digits = { '零':0, '〇':0, '一':1, '二':2, '两':2, '三':3, '四':4, '五':5, '六':6, '七':7, '八':8, '九':9 };
@@ -789,7 +837,7 @@
         const sortedList = [...store.tasks].sort((a,b) => {
             if(a.completed !== b.completed) return a.completed ? 1 : -1;
             if(a.completed) return new Date(b.completedAt) - new Date(a.completedAt);
-            if(a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+            if(a.deadline && b.deadline) return getTaskDeadlineDate(a) - getTaskDeadlineDate(b);
             if(a.deadline) return -1; if(b.deadline) return 1;
             return b.id - a.id;
         });
@@ -813,9 +861,10 @@
             }
 
             if(t.deadline && !t.completed) {
-                const d = new Date(t.deadline);
+                const d = getTaskDeadlineDate(t);
+                if(!d) return;
                 const diff = d - now;
-                const dateText = `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+                const dateText = formatTaskDeadline(t);
                 
                 let remainText = '', remainStyle = '';
                 if(diff < 0) { remainText = '已逾期'; remainStyle = 'background:var(--danger); color:#fff;'; }
