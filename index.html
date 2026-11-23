@@ -1017,13 +1017,12 @@
         const heading=document.querySelector('#readingView .extra-heading p'); heading.textContent=`${monthName} · 点选日期查看事项，点空白处新建`;
         const first=new Date(year,month,1), offset=(first.getDay()+6)%7, daysInMonth=new Date(year,month+1,0).getDate();
         const cellCount=Math.ceil((offset+daysInMonth)/7)*7;
+        if(!store.selectedReadingDate || !store.selectedReadingDate.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)) store.selectedReadingDate=localDateKey(new Date(year,month,Math.min(new Date().getDate(),daysInMonth)));
         const dateCells=Array.from({length:cellCount},(_,i)=>{
             const date=new Date(year,month,1-offset+i), key=localDateKey(date), inMonth=date.getMonth()===month;
-            const events=calendarEventsOn(key);
-            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div>${events.map(e=>`<div class="month-event ${escapeHTML(e.category)} ${e.completed?'done-event':''}" title="${escapeHTML(e.title)}">${e.time?`${escapeHTML(e.time)} `:''}${escapeHTML(e.title)}</div>`).join('')}</div>`;
+            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" data-date="${key}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div><div class="calendar-events">${calendarEventHTML(key)}</div></div>`;
         }).join('');
         document.getElementById('monthCalendar').innerHTML=dateCells;
-        if(!store.selectedReadingDate || !store.selectedReadingDate.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)) store.selectedReadingDate=localDateKey(new Date(year,month,Math.min(new Date().getDate(),daysInMonth)));
         renderMonthDayDetails();
     }
     function calendarTasksOn(dateKey) {
@@ -1048,6 +1047,9 @@
         });
         return [...plans,...tasks].sort((a,b)=>a.sortTime.localeCompare(b.sortTime)||a.title.localeCompare(b.title,'zh-CN'));
     }
+    function calendarEventHTML(dateKey) {
+        return calendarEventsOn(dateKey).map(e=>`<div class="month-event ${escapeHTML(e.category)} ${e.completed?'done-event':''}" title="${escapeHTML(e.title)}">${e.time?`${escapeHTML(e.time)} `:''}${escapeHTML(e.title)}</div>`).join('');
+    }
     function renderMonthDayDetails() {
         const date=new Date(`${store.selectedReadingDate}T00:00:00`), weekday=(date.getDay()+6)%7;
         const plans=(store.planner.weekPlans||[]).filter(p=>p.weekday===weekday).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
@@ -1056,7 +1058,15 @@
         const taskHTML=tasks.map(t=>`<div class="reading-item"><div><strong>${escapeHTML(t.title)}</strong><small>${escapeHTML(formatTaskDeadline(t)||'全天')}${t.completed?' · 已完成':' · '+escapeHTML(({work:'投资',life:'生活',health:'健康'})[t.category]||'事项')}</small>${t.notes?`<small>${escapeHTML(t.notes)}</small>`:''}</div>${t.completed?'':`<button aria-label="完成事项" onclick="toggleStatus('${t.id}')"><i class="fas fa-check-circle"></i></button>`}</div>`).join('');
         document.getElementById('monthDayDetails').innerHTML=`<h3>${escapeHTML(store.selectedReadingDate)} · ${tasks.length+plans.length} 项安排</h3>${taskHTML}${planHTML}${!tasks.length&&!plans.length?'<div class="empty-state" style="padding:18px 0">当天没有安排。点击此处添加事项。</div>':''}<button class="small-btn" onclick="addTaskForDate('${store.selectedReadingDate}')">＋ 添加事项</button>`;
     }
-    function selectReadingDate(date) { store.selectedReadingDate=date; renderReading(); }
+    function selectReadingDate(date) {
+        if(store.selectedReadingDate===date) return;
+        const previous=document.querySelector(`.calendar-day[data-date="${store.selectedReadingDate}"]`);
+        const next=document.querySelector(`.calendar-day[data-date="${date}"]`);
+        previous?.classList.remove('selected');
+        next?.classList.add('selected');
+        store.selectedReadingDate=date;
+        renderMonthDayDetails();
+    }
     function addTaskForDate(date) {
         showTaskView();
         toggleInput(true);
