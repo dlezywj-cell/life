@@ -195,33 +195,29 @@
         .week-cell.today { background:#f0f6ff; }
         .week-event { font-size:11px; line-height:1.35; padding:5px; border-radius:7px; margin-bottom:4px; background:#e8f1ff; color:#1260b5; overflow-wrap:anywhere; cursor:pointer; }
         .week-event.life { background:#e9f8ed; color:#238343; } .week-event.health { background:#fff0ef; color:#c83c35; }
+        .week-event.task-event { background:#f1edff; color:#5942a7; }
+        .week-event.done-event { opacity:.55; text-decoration:line-through; }
         .week-event .event-time { font-size:10px; opacity:.75; display:block; }
         .week-add-cell { min-height:66px; cursor:pointer; }
         .week-add-cell:hover { background:#f8faff; }
         .week-hint { color:var(--text-sec); font-size:12px; margin:10px 4px; }
-        .reading-top { display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; }
-        .reading-form,.reading-stats { background:#fff; border-radius:var(--radius-l); padding:14px; box-shadow:var(--shadow-card); }
-        .reading-form { flex:1 1 250px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-        .reading-form input,.reading-form textarea,.reading-form select { min-width:0; box-sizing:border-box; border:1px solid #eee; border-radius:9px; padding:9px; font:13px inherit; background:#fff; }
-        .reading-form input:first-child { grid-column:1/-1; }
-        .reading-form textarea { grid-column:1/-1; resize:vertical; min-height:44px; }
-        .reading-form button { grid-column:1/-1; border:0; border-radius:9px; padding:10px; color:white; background:var(--primary); font-weight:600; cursor:pointer; }
-        .reading-stats { flex:0 1 180px; display:flex; flex-direction:column; justify-content:center; color:var(--text-sec); font-size:12px; gap:7px; }
-        .reading-stats strong { color:var(--text-main); font-size:19px; }
         .calendar-card { margin-top:14px; background:#fff; border-radius:var(--radius-l); padding:12px; box-shadow:var(--shadow-card); }
         .calendar-weekdays,.calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
         .calendar-weekdays div { text-align:center; color:var(--text-sec); font-size:11px; padding:7px 0; }
-        .calendar-day { min-height:64px; border-top:1px solid #f2f2f4; padding:5px; box-sizing:border-box; font-size:11px; cursor:pointer; }
+        .calendar-day { min-height:92px; border-top:1px solid #f2f2f4; padding:5px; box-sizing:border-box; font-size:11px; cursor:pointer; overflow:hidden; }
         .calendar-day.other { color:#c7c7cc; } .calendar-day.today { background:#f0f6ff; border-radius:8px; }
         .calendar-day.selected { outline:2px solid var(--primary); outline-offset:-2px; border-radius:8px; }
         .day-num { font-weight:600; } .read-dot { color:#7455cc; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .month-event { color:#1260b5; background:#e8f1ff; border-radius:4px; padding:2px 3px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .month-event.life { color:#238343; background:#e9f8ed; } .month-event.health { color:#c83c35; background:#fff0ef; }
+        .month-event.done-event { opacity:.5; text-decoration:line-through; }
         .reading-log { margin-top:14px; background:#fff; border-radius:var(--radius-l); padding:14px; box-shadow:var(--shadow-card); }
         .reading-log h3 { font-size:14px; margin:0 0 8px; }
         .reading-item { display:flex; justify-content:space-between; gap:8px; padding:9px 0; border-top:1px solid #f2f2f4; font-size:13px; }
         .reading-item small { color:var(--text-sec); display:block; margin-top:3px; }
         .reading-item button { border:0; background:transparent; color:#ccc; cursor:pointer; }
         .reading-item button:hover { color:var(--danger); }
-        @media(max-width:560px) { .extra-heading { align-items:flex-start; } .extra-actions { flex-shrink:0; } .reading-stats { flex-direction:row; flex:1 1 100%; justify-content:space-around; } .calendar-day { min-height:53px; padding:4px 2px; } .read-dot { font-size:9px; } }
+        @media(max-width:560px) { .extra-heading { align-items:flex-start; } .extra-actions { flex-shrink:0; } .calendar-day { min-height:72px; padding:4px 2px; } .month-event { font-size:9px; } }
     </style>
 </head>
 <body>
@@ -286,7 +282,7 @@
 
 <div class="extra-tabs" aria-label="个人管理模块">
     <button class="extra-tab" id="extra-week-tab" onclick="showExtraView('week')">🗓️ 周度安排</button>
-    <button class="extra-tab" id="extra-reading-tab" onclick="showExtraView('reading')">📚 阅读日历</button>
+        <button class="extra-tab" id="extra-reading-tab" onclick="showExtraView('reading')">🗓️ 月度日历</button>
 </div>
 
 <div class="main">
@@ -311,25 +307,14 @@
 
 <section class="extra-view" id="readingView">
     <div class="extra-heading">
-        <div><h2>阅读日历</h2><p>记录每天读了什么、读了多久</p></div>
+        <div><h2>月度日历</h2><p>汇总当月待办事项和重复周计划</p></div>
         <div class="extra-actions"><button class="small-btn" onclick="moveReadingMonth(-1)">‹</button><button class="small-btn" onclick="moveReadingMonth(0)">本月</button><button class="small-btn" onclick="moveReadingMonth(1)">›</button></div>
-    </div>
-    <div class="reading-top">
-        <div class="reading-form">
-            <input id="readingTitle" placeholder="书名 / 阅读内容">
-            <input id="readingDate" type="date" aria-label="阅读日期">
-            <input id="readingMinutes" type="number" min="1" placeholder="分钟">
-            <input id="readingPages" type="number" min="0" placeholder="页数（可选）">
-            <textarea id="readingNote" placeholder="摘录或笔记（可选）"></textarea>
-            <button onclick="addReading()">记录阅读</button>
-        </div>
-        <div class="reading-stats" id="readingStats"></div>
     </div>
     <div class="calendar-card">
         <div class="calendar-weekdays"><div>周一</div><div>周二</div><div>周三</div><div>周四</div><div>周五</div><div>周六</div><div>周日</div></div>
-        <div class="calendar-grid" id="readingCalendar"></div>
+        <div class="calendar-grid" id="monthCalendar"></div>
     </div>
-    <div class="reading-log" id="readingLog"></div>
+    <div class="reading-log" id="monthDayDetails"></div>
 </section>
 
 <!-- 设置弹窗 -->
@@ -992,8 +977,17 @@
             const cells = days.map(d => {
                 const key = localDateKey(d), weekday = (d.getDay()+6)%7;
                 const matches = (store.planner.weekPlans||[]).filter(p => p.weekday === weekday && Number((p.time||'09:00').slice(0,2)) === hour);
-                const events = matches.map(p=>`<div class="week-event ${escapeHTML(p.category||'')}" onclick="editWeekPlan('${p.id}',event)"><span class="event-time">${escapeHTML(p.time||'09:00')}</span>${escapeHTML(p.title)}</div>`).join('');
-                return `<div class="week-cell week-add-cell ${key===localDateKey(new Date())?'today':''}" onclick="addWeekPlan(${weekday},'${slot}')">${events}</div>`;
+                const events = matches.map(p=>`<div class="week-event ${escapeHTML(p.category||'')}" onclick="editWeekPlan('${p.id}',event)"><span class="event-time">${escapeHTML(p.time||'09:00')} · 周计划</span>${escapeHTML(p.title)}</div>`).join('');
+                const tasks = store.tasks.filter(t => {
+                    if(t.completed) return false;
+                    const due = getTaskDeadlineDate(t);
+                    if(!due) return false;
+                    const dueKey = localDateKey(due);
+                    const effectiveKey = dueKey < localDateKey(new Date()) ? localDateKey(new Date()) : dueKey;
+                    const taskHour = dueKey < localDateKey(new Date()) ? 6 : due.getHours();
+                    return effectiveKey === key && taskHour === hour;
+                }).map(t=>`<div class="week-event task-event ${escapeHTML(t.category||'')}" onclick="openCalendarTask('${t.id}',event)"><span class="event-time">${escapeHTML(formatTaskDeadline(t)||'全天')} · 待办</span>${escapeHTML(t.title)}</div>`).join('');
+                return `<div class="week-cell week-add-cell ${key===localDateKey(new Date())?'today':''}" onclick="addWeekPlan(${weekday},'${slot}')">${events}${tasks}</div>`;
             }).join('');
             return `<div class="week-cell time">${slot}</div>${cells}`;
         }).join('');
@@ -1018,43 +1012,55 @@
         savePlanner();
     }
     function moveReadingMonth(delta) { store.readingMonthOffset = delta===0 ? 0 : store.readingMonthOffset + delta; renderReading(); }
-    function addReading() {
-        const title=document.getElementById('readingTitle').value.trim();
-        const date=document.getElementById('readingDate').value || localDateKey(new Date());
-        const minutes=Number(document.getElementById('readingMinutes').value);
-        const pages=Number(document.getElementById('readingPages').value)||0;
-        const note=document.getElementById('readingNote').value.trim();
-        if(!title) { showToast('请填写阅读内容'); return; }
-        if(!minutes || minutes<1) { showToast('请填写阅读时长'); return; }
-        store.planner.readings.push({id:`rd_${Date.now()}_${Math.random().toString(16).slice(2)}`,title,date,minutes,pages,note,createdAt:new Date().toISOString()});
-        store.selectedReadingDate=date;
-        document.getElementById('readingTitle').value=''; document.getElementById('readingMinutes').value=''; document.getElementById('readingPages').value=''; document.getElementById('readingNote').value='';
-        savePlanner();
-    }
     function renderReading() {
         const anchor = new Date(); anchor.setDate(1); anchor.setMonth(anchor.getMonth()+store.readingMonthOffset);
         const year=anchor.getFullYear(), month=anchor.getMonth();
         const monthName=new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'long'}).format(anchor);
-        const heading=document.querySelector('#readingView .extra-heading p'); heading.textContent=monthName;
+        const heading=document.querySelector('#readingView .extra-heading p'); heading.textContent=`${monthName} · 点选日期查看事项，点空白处新建`;
         const first=new Date(year,month,1), offset=(first.getDay()+6)%7, daysInMonth=new Date(year,month+1,0).getDate();
         const cellCount=Math.ceil((offset+daysInMonth)/7)*7;
         const dateCells=Array.from({length:cellCount},(_,i)=>{
             const date=new Date(year,month,1-offset+i), key=localDateKey(date), inMonth=date.getMonth()===month;
-            const logs=store.planner.readings.filter(r=>r.date===key);
-            const label=logs.length?`${logs.length}条 · ${logs.reduce((n,r)=>n+Number(r.minutes||0),0)}分`:'';
-            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div>${label?`<div class="read-dot">${escapeHTML(label)}</div>`:''}${logs.slice(0,1).map(r=>`<div class="read-dot">${escapeHTML(r.title)}</div>`).join('')}</div>`;
+            const tasks=calendarTasksOn(key);
+            const plans=(store.planner.weekPlans||[]).filter(p=>p.weekday===(date.getDay()+6)%7);
+            const events=[...plans.map(p=>({title:p.title,time:p.time||'',category:p.category||'life',plan:true,id:p.id})),...tasks.map(t=>({title:t.title,time:formatTaskDeadline(t),category:t.category||'work',id:t.id,completed:t.completed}))];
+            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div>${events.slice(0,3).map(e=>`<div class="month-event ${escapeHTML(e.category)} ${e.completed?'done-event':''}" title="${escapeHTML(e.title)}">${e.time?`${escapeHTML(e.time)} `:''}${escapeHTML(e.title)}</div>`).join('')}${events.length>3?`<div class="read-dot">+${events.length-3} 项</div>`:''}</div>`;
         }).join('');
-        document.getElementById('readingCalendar').innerHTML=dateCells;
-        const monthReadings=store.planner.readings.filter(r=>{const d=new Date(`${r.date}T00:00:00`); return d.getFullYear()===year&&d.getMonth()===month;});
-        const daysRead=new Set(monthReadings.map(r=>r.date)).size, totalMins=monthReadings.reduce((n,r)=>n+Number(r.minutes||0),0);
-        document.getElementById('readingStats').innerHTML=`<div><strong>${daysRead}</strong><br>阅读天数</div><div><strong>${totalMins}</strong><br>阅读分钟</div><div><strong>${monthReadings.reduce((n,r)=>n+Number(r.pages||0),0)}</strong><br>阅读页数</div>`;
-        if(!store.selectedReadingDate || !monthReadings.some(r=>r.date===store.selectedReadingDate)) store.selectedReadingDate=localDateKey(new Date(year,month,Math.min(new Date().getDate(),daysInMonth)));
-        const selected=store.planner.readings.filter(r=>r.date===store.selectedReadingDate);
-        document.getElementById('readingLog').innerHTML=`<h3>${escapeHTML(store.selectedReadingDate)} 的阅读记录</h3>${selected.length?selected.map(r=>`<div class="reading-item"><div><strong>${escapeHTML(r.title)}</strong><small>${r.minutes} 分钟${r.pages?` · ${r.pages} 页`:''}${r.note?` · ${escapeHTML(r.note)}`:''}</small></div><button aria-label="删除记录" onclick="removeReading('${r.id}')"><i class="fas fa-trash"></i></button></div>`).join(''):'<div class="empty-state" style="padding:18px 0">这一天还没有阅读记录</div>'}`;
-        document.getElementById('readingDate').value ||= localDateKey(new Date());
+        document.getElementById('monthCalendar').innerHTML=dateCells;
+        if(!store.selectedReadingDate || !store.selectedReadingDate.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)) store.selectedReadingDate=localDateKey(new Date(year,month,Math.min(new Date().getDate(),daysInMonth)));
+        renderMonthDayDetails();
+    }
+    function calendarTasksOn(dateKey) {
+        return store.tasks.filter(t=>{
+            if(!t.deadline) return false;
+            const due=getTaskDeadlineDate(t);
+            if(!due) return false;
+            const dueKey=localDateKey(due);
+            if(!t.completed && dueKey<localDateKey(new Date())) return dateKey===localDateKey(new Date());
+            return dueKey===dateKey;
+        });
+    }
+    function renderMonthDayDetails() {
+        const date=new Date(`${store.selectedReadingDate}T00:00:00`), weekday=(date.getDay()+6)%7;
+        const plans=(store.planner.weekPlans||[]).filter(p=>p.weekday===weekday).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+        const tasks=calendarTasksOn(store.selectedReadingDate).sort((a,b)=>(getTaskDeadlineDate(a)||0)-(getTaskDeadlineDate(b)||0));
+        const planHTML=plans.map(p=>`<div class="reading-item"><div><strong>${escapeHTML(p.title)}</strong><small>${escapeHTML(p.time||'')} · 每周重复</small></div></div>`).join('');
+        const taskHTML=tasks.map(t=>`<div class="reading-item"><div><strong>${escapeHTML(t.title)}</strong><small>${escapeHTML(formatTaskDeadline(t)||'全天')}${t.completed?' · 已完成':' · '+escapeHTML(({work:'投资',life:'生活',health:'健康'})[t.category]||'事项')}</small>${t.notes?`<small>${escapeHTML(t.notes)}</small>`:''}</div>${t.completed?'':`<button aria-label="完成事项" onclick="toggleStatus('${t.id}')"><i class="fas fa-check-circle"></i></button>`}</div>`).join('');
+        document.getElementById('monthDayDetails').innerHTML=`<h3>${escapeHTML(store.selectedReadingDate)} · ${tasks.length+plans.length} 项安排</h3>${taskHTML}${planHTML}${!tasks.length&&!plans.length?'<div class="empty-state" style="padding:18px 0">当天没有安排。点击此处添加事项。</div>':''}<button class="small-btn" onclick="addTaskForDate('${store.selectedReadingDate}')">＋ 添加事项</button>`;
     }
     function selectReadingDate(date) { store.selectedReadingDate=date; renderReading(); }
-    function removeReading(id) { if(confirm('删除这条阅读记录？')) { store.planner.readings=store.planner.readings.filter(r=>r.id!==id); savePlanner(); } }
+    function addTaskForDate(date) {
+        showTaskView();
+        toggleInput(true);
+        const d=new Date(`${date}T09:00:00`);
+        document.getElementById('newDate').value=toLocalDateTimeValue(d);
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+    function openCalendarTask(id,event) {
+        if(event) event.stopPropagation();
+        window.editTask(id);
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
     function renderExtra() { if(store.extraView==='week') renderWeek(); if(store.extraView==='reading') renderReading(); }
     function savePlanner() {
         localStorage.setItem(LIFE_STORAGE_KEYS.planner,JSON.stringify(store.planner));
@@ -1167,6 +1173,7 @@
 
         const titles = { all:'所有待办', work:'投资事项', life:'生活杂事', health:'健康管理', archive:'归档记录' };
         document.getElementById('viewTitle').innerText = titles[store.filter];
+        renderExtra();
         
         const isArch = store.filter === 'archive';
         document.getElementById('clearBtn').style.display = isArch ? 'block' : 'none';
