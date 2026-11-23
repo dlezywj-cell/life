@@ -539,6 +539,16 @@
         return { ...parsed, title: title[1].trim(), notes: '', cycle: 'none', category: 'work' };
     }
 
+    function parseLabeledSchedule(rawText) {
+        const match = rawText.match(/^\s*(.+?)\s*(?:时间|日期时间)\s*[：:]\s*(.+?)\s*$/);
+        if(!match) return null;
+        const title=match[1].replace(/[，,、：:\s]+$/,'').trim();
+        if(!title) return null;
+        const parsed=parseSmartText(match[2]);
+        if(!parsed || !parsed.deadline) return null;
+        return {...parsed,title,notes:'',cycle:'none',category:store.inputCat};
+    }
+
     function parseSmartText(rawText, now = new Date()) {
         let text = rawText.trim().replace(/，/g, ' ').replace(/。/g, ' ');
         if(!text) return null;
@@ -591,6 +601,16 @@
                 if(month < date.getMonth() + 1 || (month === date.getMonth() + 1 && day < date.getDate())) year++;
                 date.setFullYear(year, month - 1, day);
                 hasDate = date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+            }
+            consume(match[0]);
+        } else if((match = text.match(/(?<!\d)(\d{1,2})\s*(?:日|号)(?!\d)/))) {
+            const day=Number(match[1]);
+            const currentMonth=date.getMonth();
+            const candidate=new Date(date.getFullYear(),currentMonth,day);
+            if(day>=1 && day<=new Date(date.getFullYear(),currentMonth+1,0).getDate()) {
+                if(day<date.getDate()) candidate.setMonth(candidate.getMonth()+1);
+                date.setFullYear(candidate.getFullYear(),candidate.getMonth(),candidate.getDate());
+                hasDate=true;
             }
             consume(match[0]);
         } else if((match = text.match(/(下|本|这|每)?(?:周|星期|礼拜)([一二三四五六日天])/))) {
@@ -782,6 +802,15 @@
             document.getElementById('newCycle').value = 'none';
             setInpCat(meeting.category);
             return showToast('已识别会议，请确认');
+        }
+        const labeled = parseLabeledSchedule(raw);
+        if(labeled) {
+            document.getElementById('newTitle').value=labeled.title;
+            document.getElementById('newNote').value='';
+            document.getElementById('newDate').value=labeled.deadline;
+            document.getElementById('newCycle').value='none';
+            setInpCat(labeled.category);
+            return showToast('已识别事项和时间，请确认');
         }
         const lines = splitBatchLines(raw);
         if(lines.length > 1) {
