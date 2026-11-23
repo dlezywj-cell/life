@@ -176,10 +176,9 @@
         .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         .toast i { font-size: 28px; color: var(--success); }
 
-        /* Weekly planner and reading calendar */
-        .extra-tabs { display: flex; gap: 8px; padding: 0 16px 12px; background: var(--bg); }
-        .extra-tab { border: 0; border-radius: 18px; padding: 8px 14px; background: #fff; color: var(--text-sec); font: 600 13px inherit; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,.03); }
-        .extra-tab.active { color: #fff; background: var(--info); }
+        /* Weekly planner and monthly calendar tabs share the main filter row. */
+        .tab.calendar-tab { border:0; font-family:inherit; }
+        .tab.calendar-tab.active { background:var(--info); }
         .extra-view { display: none; padding: 10px 16px 80px; }
         .extra-view.active { display: block; }
         .extra-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin: 0 4px 12px; }
@@ -279,12 +278,9 @@
         <div class="tab" onclick="setFilter('life')" id="tab-life">生活 <span class="badge" id="c-life">0</span></div>
         <div class="tab" onclick="setFilter('health')" id="tab-health">健康 <span class="badge" id="c-health">0</span></div>
         <div class="tab" onclick="setFilter('archive')" id="tab-archive">归档 <span class="badge" id="c-archive">0</span></div>
+        <button class="tab calendar-tab" id="extra-week-tab" onclick="showExtraView('week')">🗓️ 周度日历</button>
+        <button class="tab calendar-tab" id="extra-reading-tab" onclick="showExtraView('reading')">🗓️ 月度日历</button>
     </div>
-</div>
-
-<div class="extra-tabs" aria-label="个人管理模块">
-    <button class="extra-tab" id="extra-week-tab" onclick="showExtraView('week')">🗓️ 周度安排</button>
-        <button class="extra-tab" id="extra-reading-tab" onclick="showExtraView('reading')">🗓️ 月度日历</button>
 </div>
 
 <div class="main">
@@ -945,10 +941,10 @@
     }
     function showExtraView(view) {
         store.extraView = view;
-        document.querySelector('.tabs-wrapper').style.display = 'none';
         document.querySelector('.main').style.display = 'none';
         document.querySelectorAll('.extra-view').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.extra-tab').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.calendar-tab').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab:not(.calendar-tab)').forEach(el => el.classList.remove('active'));
         document.getElementById(view === 'week' ? 'weekView' : 'readingView').classList.add('active');
         document.getElementById(`extra-${view}-tab`).classList.add('active');
         renderExtra();
@@ -957,9 +953,9 @@
         store.extraView = '';
         document.querySelector('.tabs-wrapper').style.display = '';
         document.querySelector('.main').style.display = '';
-        document.querySelectorAll('.extra-view,.extra-tab').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.extra-view,.calendar-tab').forEach(el => el.classList.remove('active'));
     }
-    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', showTaskView));
+    document.querySelectorAll('.tab:not(.calendar-tab)').forEach(tab => tab.addEventListener('click', showTaskView));
     function weekStart(offset = store.weekOffset) {
         const date = new Date();
         date.setHours(0,0,0,0);
@@ -1024,9 +1020,7 @@
         const dateCells=Array.from({length:cellCount},(_,i)=>{
             const date=new Date(year,month,1-offset+i), key=localDateKey(date), inMonth=date.getMonth()===month;
             const events=calendarEventsOn(key);
-            const expanded=store.expandedCalendarDate===key;
-            const shown=expanded?events:events.slice(0,3);
-            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div>${shown.map(e=>`<div class="month-event ${escapeHTML(e.category)} ${e.completed?'done-event':''}" title="${escapeHTML(e.title)}">${e.time?`${escapeHTML(e.time)} `:''}${escapeHTML(e.title)}</div>`).join('')}${events.length>3?`<button type="button" class="month-more" onclick="toggleCalendarDay('${key}',event)">${expanded?'收起':`+${events.length-3} 项`}</button>`:''}</div>`;
+            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div>${events.map(e=>`<div class="month-event ${escapeHTML(e.category)} ${e.completed?'done-event':''}" title="${escapeHTML(e.title)}">${e.time?`${escapeHTML(e.time)} `:''}${escapeHTML(e.title)}</div>`).join('')}</div>`;
         }).join('');
         document.getElementById('monthCalendar').innerHTML=dateCells;
         if(!store.selectedReadingDate || !store.selectedReadingDate.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)) store.selectedReadingDate=localDateKey(new Date(year,month,Math.min(new Date().getDate(),daysInMonth)));
@@ -1053,11 +1047,6 @@
             return {title:t.title,time,category:t.category||'work',id:t.id,completed:t.completed,sortTime:overdue?'00:00':(due?`${String(due.getHours()).padStart(2,'0')}:${String(due.getMinutes()).padStart(2,'0')}`:'23:59')};
         });
         return [...plans,...tasks].sort((a,b)=>a.sortTime.localeCompare(b.sortTime)||a.title.localeCompare(b.title,'zh-CN'));
-    }
-    function toggleCalendarDay(date,event) {
-        event.stopPropagation();
-        store.expandedCalendarDate=store.expandedCalendarDate===date?'':date;
-        renderReading();
     }
     function renderMonthDayDetails() {
         const date=new Date(`${store.selectedReadingDate}T00:00:00`), weekday=(date.getDay()+6)%7;
