@@ -203,11 +203,11 @@
         .calendar-card { margin-top:14px; background:#fff; border-radius:var(--radius-l); padding:12px; box-shadow:var(--shadow-card); }
         .calendar-weekdays,.calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
         .calendar-weekdays div { text-align:center; color:var(--text-sec); font-size:11px; padding:7px 0; }
-        .calendar-day { min-height:92px; border-top:1px solid #f2f2f4; padding:5px; box-sizing:border-box; font-size:11px; cursor:pointer; overflow:hidden; }
+        .calendar-day { min-height:92px; border-top:1px solid #f2f2f4; padding:5px; box-sizing:border-box; font-size:11px; cursor:pointer; }
         .calendar-day.other { color:#c7c7cc; } .calendar-day.today { background:#f0f6ff; border-radius:8px; }
         .calendar-day.selected { outline:2px solid var(--primary); outline-offset:-2px; border-radius:8px; }
         .day-num { font-weight:600; } .read-dot { color:#7455cc; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .month-event { color:#1260b5; background:#e8f1ff; border-radius:4px; padding:2px 3px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .month-event { color:#1260b5; background:#e8f1ff; border-radius:4px; padding:2px 3px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; contain:layout paint; }
         .month-event.life { color:#238343; background:#e9f8ed; } .month-event.health { color:#c83c35; background:#fff0ef; }
         .month-event.done-event { opacity:.5; text-decoration:line-through; }
         .month-more { display:block; border:0; padding:2px 1px; margin-top:2px; background:transparent; color:var(--info); font:inherit; text-align:left; cursor:pointer; }
@@ -218,7 +218,7 @@
         .reading-item small { color:var(--text-sec); display:block; margin-top:3px; }
         .reading-item button { border:0; background:transparent; color:#ccc; cursor:pointer; }
         .reading-item button:hover { color:var(--danger); }
-        @media(max-width:560px) { .extra-heading { align-items:flex-start; } .extra-actions { flex-shrink:0; } .calendar-day { min-height:72px; padding:4px 2px; } .month-event { font-size:9px; } }
+        @media(max-width:560px) { .extra-heading { align-items:flex-start; } .extra-actions { flex-shrink:0; } .calendar-card { padding:6px; } .calendar-day { min-height:72px; padding:4px 2px; } .month-event { font-size:9px; } }
     </style>
 </head>
 <body>
@@ -1018,9 +1018,10 @@
         const first=new Date(year,month,1), offset=(first.getDay()+6)%7, daysInMonth=new Date(year,month+1,0).getDate();
         const cellCount=Math.ceil((offset+daysInMonth)/7)*7;
         if(!store.selectedReadingDate || !store.selectedReadingDate.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)) store.selectedReadingDate=localDateKey(new Date(year,month,Math.min(new Date().getDate(),daysInMonth)));
+        const eventIndex=buildCalendarEventIndex(year,month,offset,cellCount);
         const dateCells=Array.from({length:cellCount},(_,i)=>{
             const date=new Date(year,month,1-offset+i), key=localDateKey(date), inMonth=date.getMonth()===month;
-            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" data-date="${key}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div><div class="calendar-events">${calendarEventHTML(key)}</div></div>`;
+            return `<div class="calendar-day ${inMonth?'':'other'} ${key===localDateKey(new Date())?'today':''} ${key===store.selectedReadingDate?'selected':''}" data-date="${key}" onclick="selectReadingDate('${key}')"><div class="day-num">${date.getDate()}</div><div class="calendar-events">${eventIndex.get(key)||''}</div></div>`;
         }).join('');
         document.getElementById('monthCalendar').innerHTML=dateCells;
         renderMonthDayDetails();
@@ -1047,8 +1048,34 @@
         });
         return [...plans,...tasks].sort((a,b)=>a.sortTime.localeCompare(b.sortTime)||a.title.localeCompare(b.title,'zh-CN'));
     }
-    function calendarEventHTML(dateKey) {
-        return calendarEventsOn(dateKey).map(e=>`<div class="month-event ${escapeHTML(e.category)} ${e.completed?'done-event':''}" title="${escapeHTML(e.title)}">${e.time?`${escapeHTML(e.time)} `:''}${escapeHTML(e.title)}</div>`).join('');
+    function buildCalendarEventIndex(year,month,offset,cellCount) {
+        const dates=Array.from({length:cellCount},(_,i)=>localDateKey(new Date(year,month,1-offset+i)));
+        const dateSet=new Set(dates), today=localDateKey(new Date()), index=new Map(dates.map(date=>[date,[]]));
+        const weeklyByDay=new Map();
+        (store.planner.weekPlans||[]).forEach(plan=>{
+            const weekday=Number(plan.weekday);
+            if(!weeklyByDay.has(weekday)) weeklyByDay.set(weekday,[]);
+            weeklyByDay.get(weekday).push({title:plan.title,time:plan.time||'',category:plan.category||'life',sortTime:plan.time||'23:59'});
+        });
+        dates.forEach(key=>{
+            const weekday=(new Date(`${key}T00:00:00`).getDay()+6)%7;
+            index.set(key,(weeklyByDay.get(weekday)||[]).map(event=>({...event})));
+        });
+        store.tasks.forEach(task=>{
+            if(!task.deadline) return;
+            const due=getTaskDeadlineDate(task); if(!due) return;
+            const dueKey=localDateKey(due);
+            const displayKey=!task.completed&&dueKey<today?today:dueKey;
+            if(!dateSet.has(displayKey)) return;
+            const overdue=!task.completed&&dueKey<today;
+            const event={title:task.title,time:overdue?'逾期':formatTaskDeadline(task),category:task.category||'work',completed:task.completed,sortTime:overdue?'00:00':`${String(due.getHours()).padStart(2,'0')}:${String(due.getMinutes()).padStart(2,'0')}`};
+            index.get(displayKey).push(event);
+        });
+        index.forEach((events,key)=>{
+            events.sort((a,b)=>a.sortTime.localeCompare(b.sortTime)||a.title.localeCompare(b.title,'zh-CN'));
+            index.set(key,events.map(e=>`<div class="month-event ${escapeHTML(e.category)} ${e.completed?'done-event':''}" title="${escapeHTML(e.title)}">${e.time?`${escapeHTML(e.time)} `:''}${escapeHTML(e.title)}</div>`).join(''));
+        });
+        return index;
     }
     function renderMonthDayDetails() {
         const date=new Date(`${store.selectedReadingDate}T00:00:00`), weekday=(date.getDay()+6)%7;
